@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LandingFlow } from "@/components/landing/landing-flow";
 
 export default function LandingPage() {
   return (
@@ -9,9 +10,8 @@ export default function LandingPage() {
         <CardHeader>
           <CardTitle>MD Tools</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          The YouTube-link / file-upload field, format picker, and &quot;Process&quot; flow land here in
-          Phase 4, once Supabase (Phase 2) and the processor service (Phase 3) are wired up.
+        <CardContent>
+          <LandingFlow />
         </CardContent>
       </Card>
     </main>

@@ -11,117 +11,112 @@ Five features required by the user:
 4. **Track splitter (stems)** — separate stems, show one waveform per stem, synchronized play/pause, per-stem mute/solo/volume, download individual stems or a mixdown that reflects the current levels.
 5. **Audio analyzer** — key/tempo/time-signature, displayed persistently in a header across all edit-page tabs (not a separate page).
 
-Landing page: single YouTube-URL-or-file-upload field + "Process" button, branching to format-picker (YouTube) or straight to edit page (upload).
+Landing page: single YouTube-URL-or-file-upload field + "Process" button, branching to format-picker (YouTube) or straight to edit page (upload). **This part is now built (Phase 4) — see Current State.**
 
 ### Confirmed architecture decisions (from user, via AskUserQuestion)
 - **Auth**: Supabase Auth, small closed team with individual logins, redirect URLs driven by env vars (per environment) — no open public signup.
-- **Heavy audio processing** (yt-dlp, ffmpeg, librosa, Demucs) cannot run on Vercel/Next.js serverless — must run in a **separate Python microservice** (FastAPI, deployed to Railway/Fly.io or similar, not yet chosen/deployed).
-- **Stem separation engine**: **Demucs (htdemucs)**, explicitly not Spleeter (dlp-gui used Spleeter, but it's unmaintained; Demucs was chosen for quality).
+- **Heavy audio processing** (yt-dlp, ffmpeg, librosa, Demucs) cannot run on Vercel/Next.js serverless — runs in a **separate Python microservice** (FastAPI). Confirmed this session: deploys to **Railway or Fly.io** (not yet chosen — deferred to Phase 10 on the user's explicit instruction), Next.js stays on Vercel. They talk over HTTPS: Next.js → processor via `PROCESSOR_BASE_URL` + bearer `PROCESSOR_SERVICE_TOKEN`; processor → Supabase directly via service-role key to update job status.
+- **Stem separation engine**: **Demucs (htdemucs)**, explicitly not Spleeter.
 - Full architecture, data model, and phased build order are written out in the approved plan file: **`C:\Users\Arellano\.claude\plans\tingly-wondering-dahl.md`** — read this file first, it is the source of truth for scope/design and should not be re-derived from scratch.
 
 ## Current State
 
-**Phase 1 (project scaffolding) is complete and verified working.** Phases 2 (Supabase) and 3 (Python processor) have not been started — no Supabase schema/RLS/storage exists yet, no processor service exists yet. Phases 4–10 (actual feature UI) are all stub placeholders only.
+**Phases 1–4 are complete.** Phases 5–10 have not been started (Phase 5's shell already exists as a stub from Phase 1 scaffolding, but has no real Realtime/analyzer wiring yet).
 
-- `npm run build` passes clean (verified this session).
-- `npm run lint` passes clean (verified this session).
-- Dev server was smoke-tested (`npm run dev`, curl to `/login` — rendered correctly) and then stopped.
-- The app is currently **not usable end-to-end** — every page that touches Supabase will fail or behave oddly because `.env.local` has empty placeholder values (see Context & Gotchas). Middleware auth-gating is unverified against a real project (see Failed Attempts).
-- A new Supabase project was created by the user (ref `tmtydxacbfajdeybwvkb`) and a project-scoped MCP server config was added, but **authentication was not completed** — this is the very next step (see Next Step).
+- Phase 1 (scaffolding): done, verified previously.
+- Phase 2 (Supabase): done. Tables (`profiles`, `tracks`, `jobs`, `track_stems`) + RLS applied. Storage buckets `raw-uploads`/`processed` created with per-user RLS. Real Supabase URL + anon key are in `.env.local`. Real generated `Database` type (`src/types/supabase.ts`) is wired into all Supabase clients. **A real bug was found and fixed**: Next.js 16 renamed `middleware.ts` → `proxy.ts`, and undocumented, the file must live at the same directory level as `app/` (i.e. `src/proxy.ts`, not repo root) or it silently never runs. Verified working: unauthenticated `/` → 307 to `/login?next=...`, `/login` stays public, `/api/*` returns its own JSON 401 instead of being redirected (matcher now excludes `api`).
+- Phase 3 (Python processor): done. `services/processor/` is a full FastAPI app (see Files section) implementing all 5 job endpoints from the plan. Verified via syntax check + a throwaway venv smoke test (auth/validation/routing all correct; a full valid request path was traced up to the point it needs real network access, which is the expected/correct failure point). **Never deployed** — no Railway/Fly.io project exists yet.
+- Phase 4 (landing page): done. `src/app/page.tsx` now renders `LandingFlow` (`src/components/landing/landing-flow.tsx`) — the real URL/upload input, YouTube format+quality picker, download job creation with **Realtime** status tracking (not polling), "Continue to Edit"/"Download file" branching, and the direct-to-Storage upload path. Verified: clean `npm run build` + `npm run lint`, and a real (if limited) browser render check — see Failed Attempts / Context for exactly what was and wasn't verified.
+
+**Nothing is committed since the user's own "initial commit"** (git log shows exactly one commit). That commit already included most of Phase 2 (Supabase clients, generated types, migrations were already applied via MCP before the commit). Everything below is **uncommitted working-tree state**:
+
+```
+ M .gitignore                              (added python ignores for services/processor)
+ D proxy.ts                                (old root file — Next 16 proxy bug fix)
+ M src/app/api/jobs/download/route.ts      (added optional `quality` field — Phase 3/4)
+ M src/app/page.tsx                        (renders LandingFlow — Phase 4)
+?? services/                               (all of Phase 3 — new)
+?? src/components/landing/                 (Phase 4 — new)
+?? src/components/ui/progress.tsx          (shadcn add — Phase 4)
+?? src/components/ui/select.tsx            (shadcn add — Phase 4)
+?? src/lib/ytdlp-formats.ts                (Phase 4 — new)
+?? src/proxy.ts                            (Next 16 proxy bug fix — replaces root proxy.ts)
+```
+
+`package.json`/`package-lock.json` are unchanged despite adding `select`/`progress` — `@base-ui/react` was already a dependency from Phase 1, so no new packages were needed.
+
+The user has **not been asked whether to commit this** — do not commit without asking, per standing git-safety rules.
 
 ## Files Actively Being Edited
 
-Nothing is mid-edit / broken — all files below are in a complete, buildable state for what they currently do (mostly stubs). Full inventory of everything created this session:
+Nothing is mid-edit / broken. Everything below is complete and working for what it currently does.
 
-**Config / root**
-- `package.json` — name fixed to `erar-md-tools-web` (was left as `erar-md-tools-web-tmp` by the scaffold trick, see Context & Gotchas).
-- `.gitignore` — added `!.env.example` exception so the example env file isn't swallowed by the `.env*` ignore rule.
-- `.env.example` — documents all required env vars (Supabase URL/anon/service-role, `NEXT_PUBLIC_AUTH_REDIRECT_URL`, `PROCESSOR_BASE_URL`, `PROCESSOR_SERVICE_TOKEN`), all currently blank.
-- `.env.local` — copy of `.env.example`, i.e. **all values are still blank placeholders**. Gitignored.
-- `middleware.ts` — root middleware, delegates to `src/lib/supabase/middleware.ts`, matcher excludes `_next/static`, `_next/image`, favicon, and image extensions.
-- `.mcp.json` — **created this session**, project-scoped Supabase MCP server pointing at `project_ref=tmtydxacbfajdeybwvkb` (the user's new project). Added via `claude mcp add --scope project --transport http supabase "https://mcp.supabase.com/mcp?project_ref=tmtydxacbfajdeybwvkb&features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching%2Cstorage"`. **Not yet authenticated.**
-- `components.json` — shadcn/ui config, generated by `shadcn init`.
+**Phase 2 fix (this session)**
+- `src/proxy.ts` — **moved from root `proxy.ts`**, function renamed `middleware` → `proxy` (Next.js 16 convention), and the matcher changed to `"/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"` (excludes `/api` so API routes own their own auth response shape).
+- `src/lib/supabase/proxy.ts` — (renamed from `middleware.ts`) `updateSession()`, now parameterized `createServerClient<Database>`, and `getUser()` wrapped in try/catch (was previously unguarded).
+- `src/types/supabase.ts` — the real `supabase gen types typescript` output for this project. `src/lib/supabase/{client,server,admin}.ts` are all now parameterized with this `Database` type (previously unparameterized due to a since-resolved generic-inference issue).
+- `.env.local` — `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are real values. `PROCESSOR_SERVICE_TOKEN` is a generated random token (`secrets.token_urlsafe(32)`), also copied into `services/processor/.env`. **`SUPABASE_SERVICE_ROLE_KEY` and `PROCESSOR_BASE_URL` are still blank** — see Next Step.
 
-**Supabase / auth plumbing**
-- `src/lib/supabase/client.ts` — browser Supabase client. **Not parameterized with a `Database` generic** (see Failed Attempts / Gotchas for why).
-- `src/lib/supabase/server.ts` — server-component/route-handler Supabase client using `@supabase/ssr` cookies adapter. Also unparameterized.
-- `src/lib/supabase/admin.ts` — service-role client (`server-only` guarded), for the `/api/jobs/*` routes only, bypasses RLS. Unparameterized.
-- `src/lib/supabase/middleware.ts` — `updateSession()`: refreshes session, redirects to `/login?next=...` when there's no user and the path isn't `/login` or `/auth/callback`. **Untested against a real project** — see Failed Attempts, it silently no-op'd against placeholder empty-string credentials.
-- `src/app/login/page.tsx` — client component, email input, calls `supabase.auth.signInWithOtp` with `emailRedirectTo: \`${NEXT_PUBLIC_AUTH_REDIRECT_URL}/auth/callback\`` (magic-link/passwordless flow).
-- `src/app/auth/callback/route.ts` — exchanges the `code` query param for a session via `supabase.auth.exchangeCodeForSession`, redirects to `next` or `/login` on failure.
+**Phase 3 (Python processor) — all new, under `services/processor/`**
+- `requirements.txt`, `Dockerfile`, `.env.example`, `.env` (gitignored, has real `SUPABASE_URL` + `PROCESSOR_SERVICE_TOKEN`, blank `SUPABASE_SERVICE_ROLE_KEY`)
+- `app/config.py` — env loading, fails fast on missing required vars
+- `app/security.py` — bearer-token dependency (`verify_service_token`)
+- `app/supabase_client.py` — service-role client; `get_job`/`get_track`/`mark_job_processing`/`mark_job_done`/`mark_job_error`/`update_track`/`insert_track_stem`
+- `app/storage.py` — `<bucket>/<user_id>/...` storage-path convention, `download_to`/`upload_file`
+- `app/jobs.py` — `run_job()`: shared background-task wrapper (mark processing → run → mark done/error → cleanup temp dir)
+- `app/audio_analysis.py` — tempo/key/time-signature analysis **ported from dlp-gui's `TEMPO_CLICK_SCRIPT`** (`dlp_gui/constants.py`) into real importable functions, plus `render_click_track()` for the click-track endpoint
+- `app/ytdlp_formats.py` — format/quality tables ported from dlp-gui's `constants.py`/`ytdlp_args.py`, adapted to yt-dlp's Python API (`build_ydl_opts`)
+- `app/routers/{download,analyze,trim,click_track,split}.py` — all 5 endpoints; each does bearer-auth → 202 → background task → job status update
+  - `split.py`: stems=2 uses Demucs's native `--two-stems=vocals` (real isolation, not a mixdown); the accompaniment side is stored as stem_name `"other"` since the DB enum has no dedicated "instrumental" value
+- `app/main.py` — wires all routers + `/health`
 
-**Data layer**
-- `src/types/database.ts` — hand-written `Profile`, `Track`, `Job`, `TrackStem` interfaces + `JobType`/`JobStatus`/`SourceType`/`StemName` unions, matching the schema in the plan file. **No `Database` generic type anymore** — was removed after it broke the Supabase client's generic resolution (see Failed Attempts). A comment at the bottom notes `supabase gen types typescript` should replace/inform this once the real schema exists.
-- `src/lib/jobs.ts` — `createJob(supabase, userId, type, params, trackId?)`, inserts a `jobs` row with status `"pending"`, returns it cast `as Job`.
-- `src/lib/auth.ts` — `requireUser()`, returns `{ supabase, user } | null` for use in route handlers.
-- `src/lib/processor.ts` — `callProcessor<T>(path, body)`, POSTs to `PROCESSOR_BASE_URL + path` with a `Authorization: Bearer PROCESSOR_SERVICE_TOKEN` header; throws a descriptive error if those env vars are unset (they currently are — Phase 3 not started).
+**Phase 4 (landing page) — all new**
+- `src/lib/ytdlp-formats.ts` — frontend mirror of the Python format/quality tables, plus `isEditableFormat` (mp3/wav only → "Continue to Edit"), `looksLikeYoutubeUrl`
+- `src/components/landing/landing-flow.tsx` — the whole flow, `'use client'`. Key behaviors: mutually-exclusive URL/file inputs, format picker (shadcn `Select`) shown after "Process" on the YouTube path, `/api/jobs/download` call, **Supabase Realtime subscription** on the created job's row for live status (not polling), branch to "Continue to Edit" (mp3/wav — creates `tracks` row client-side, fires `/api/jobs/analyze` fire-and-forget, routes to `/edit/[trackId]`) or "Download file" (signed URL) on completion, and a separate direct-to-`raw-uploads`-bucket upload path for local files
+- `src/app/page.tsx` — now renders `<LandingFlow />` instead of the Phase-4-stub text
+- `src/components/ui/select.tsx`, `src/components/ui/progress.tsx` — added via `npx shadcn@latest add select progress` (uses `@base-ui/react`, already a dependency — no new npm packages)
+- `src/app/api/jobs/download/route.ts` — added optional `quality` field alongside `format`, threaded through to the processor call
 
-**API routes** (all: `requireUser()` → 401 if none → validate body → `createJob(...)` → `callProcessor(...)` → return `{ job }`) — all will currently throw at the `callProcessor` step since Phase 3 doesn't exist yet:
-- `src/app/api/jobs/download/route.ts` — body `{ youtube_url, format }`.
-- `src/app/api/jobs/analyze/route.ts` — body `{ track_id, storage_path }`.
-- `src/app/api/jobs/trim/route.ts` — body `{ track_id, storage_path, start_ms, end_ms }`, validates `end_ms > start_ms`.
-- `src/app/api/jobs/click-track/route.ts` — body `{ track_id, storage_path?, bpm, time_signature, accent?, tempo_multiplier?, merge_with_source? }`.
-- `src/app/api/jobs/split/route.ts` — body `{ track_id, storage_path, stems }`, validates `stems` is `2` or `4`.
-
-**Pages (UI shells / stubs)**
-- `src/app/layout.tsx` — root layout, wraps children in shadcn `TooltipProvider` + adds the `Toaster` (sonner). Metadata title/description changed to "MD Tools".
-- `src/app/page.tsx` — landing page **stub only** — shows the brand image + a card saying the real Process/upload flow lands in Phase 4. **Not the real feature yet.**
-- `src/app/edit/[trackId]/layout.tsx` — fetches the track server-side (`supabase.from("tracks").select("*").eq("id", trackId).single()`, cast `as Track`), 404s via `notFound()` if missing, renders header with title + three `Badge`s for key/tempo/time-signature (showing analyzed values or "…"), and a tab nav to `trim` / `metronome` / `split`.
-- `src/app/edit/[trackId]/page.tsx` — redirects to `.../trim`.
-- `src/app/edit/[trackId]/trim/page.tsx`, `.../metronome/page.tsx`, `.../split/page.tsx` — each a bare `Card` with placeholder text naming which future phase (6/7/8) implements it. **No real functionality yet.**
-
-**Assets**
-- `public/brand-background.png`, `public/brand-qrcode.png` — moved/renamed from the user's pre-existing loose `background-removed.png` / `qrcode.png` files.
-- `src/app/favicon.ico` — the user's pre-existing `favicon.ico`, moved here (App Router convention — this path wins over `public/favicon.ico`, so nothing was left in `public/`).
-
-**Dependencies installed** (`package.json`): `@supabase/supabase-js@^2.117.0`, `@supabase/ssr@^0.12.7`, `wavesurfer.js@^7.12.12`, `zustand@^5.0.15`, `server-only`, plus shadcn/ui's component deps (radix primitives, `sonner`, etc.) and the create-next-app defaults (`next@16.3.6`, `react@19.2.8`).
+**Migrations applied this session** (via `mcp__supabase__apply_migration`, all already live on the real project `tmtydxacbfajdeybwvkb`):
+- `phase2_core_schema` — 4 tables, enums, RLS
+- `phase2_storage_buckets` — `raw-uploads`/`processed` buckets + storage RLS
+- `phase4_enable_realtime_jobs` — `alter publication supabase_realtime add table public.jobs;` (was empty before — no table had Realtime enabled)
 
 ## Failed Attempts
 
-- **What was tried**: Parameterizing `createBrowserClient<Database>(...)` / `createServerClient<Database>(...)` / `createClient<Database>(...)` with a hand-written `Database` interface (public.Tables.{profiles,tracks,jobs,track_stems} each with Row/Insert/Update/Relationships, plus Views/Functions/Enums/CompositeTypes as `Record<string, never>`), shaped to satisfy postgrest-js's `GenericSchema` constraint.
-  **Why it failed**: `npm run build` kept failing TypeScript with errors like `Property 'id' does not exist on type 'never'` on every `.from(...)` query result and on `createJob`'s insert, even after reshaping the `Database` type to structurally match `GenericSchema` (confirmed by reading `node_modules/@supabase/postgrest-js/src/types/common/common.ts`). The installed `@supabase/supabase-js@2.117.0` / `postgrest-js@2.117.0` are very recent and have added a more complex generic-resolution chain in `SupabaseClient.ts` involving `Omit<Database, '__InternalSupabase'>` and a `PostgrestVersion` marker (`Database['__InternalSupabase']`). Root cause was not fully isolated (didn't burn more time on first-principles debugging of the new conditional types) — **pragmatic workaround chosen instead**: dropped the `Database` generic entirely from all three client constructors, and cast `.from(...)` query results by hand to the `Profile`/`Track`/`Job`/`TrackStem` interfaces at each call site (see `src/lib/jobs.ts` and `src/app/edit/[trackId]/layout.tsx` for the pattern). **This is a known compromise, not a final answer** — once `supabase gen types typescript` produces the real generated type (Phase 2, after tables exist), try parameterizing the clients with that real generated type; it may just work since it'll be shaped exactly how the library expects (possibly including the `__InternalSupabase` marker), or the same issue may recur and need real investigation.
-- **What was tried**: Ran `create-next-app` directly inside `erar-md-tools-web`, which already had 3 loose files (`background-removed.png`, `favicon.ico`, `qrcode.png`).
-  **Why it failed**: create-next-app refuses to scaffold into a non-empty directory unless the existing files are on its internal safe-list (`.git`, `README.md`, `LICENSE`, etc.) — arbitrary files/folders (even a purpose-made staging subfolder) count as "conflicting". **Workaround used**: scaffolded into a throwaway sibling directory (`erar-md-tools-web-tmp`), then `mv`'d every generated file/folder except `.git` and `.next` into the real directory, then `rm -rf`'d the now-empty temp directory. This worked and is why `package.json`'s `name` field had to be manually fixed afterward (create-next-app named it after the temp directory).
-- **What was tried**: `shadcn@latest init -y -b neutral` (guessing `-b` meant base color, matching older shadcn CLI docs/memory).
-  **Why it failed**: In the currently-installed `shadcn@4.21.0` CLI, `-b`/`--base` now means the component *primitives library* (`radix` | `base` | `aria`), not a Tailwind base color — `neutral` isn't a valid value, so it errored with a validation message. **Fix**: dropped `-b` entirely and ran `shadcn@latest init -y -d` (defaults), which succeeded.
-- **What was tried**: Added the classic shadcn `toast` component (`npx shadcn add toast`) for notifications.
-  **Why it failed**: Not exactly a failure, but it's the deprecated pattern (only creates `toast.tsx`, no `use-toast` hook/`Toaster`, and modern shadcn docs point to `sonner` instead). **Fix**: added `sonner` instead, deleted the unused `toast.tsx`, wired `<Toaster />` from `@/components/ui/sonner` into `src/app/layout.tsx`.
-- **What was tried**: Verifying the auth-gating middleware end-to-end by starting `npm run dev` and curling `/` (expecting a redirect to `/login` since unauthenticated).
-  **Why it failed / inconclusive**: Got `200` for `/` instead of a redirect, with no error in the dev server log. Root cause is almost certainly that `.env.local` has **empty-string** Supabase URL/anon key, so `supabase.auth.getUser()` inside `updateSession()` either throws (fetch to an effectively-invalid/relative URL) or resolves in some way that isn't a clean `{ user: null }` with a caught error — the middleware in `src/lib/supabase/middleware.ts` has **no try/catch around `getUser()`**, so this needs re-verification once real Supabase credentials are in `.env.local`. **Do not trust the middleware's auth-gating until this is re-tested against the real project.**
-- **What was tried**: Stopped the smoke-test dev server with `taskkill //F //IM node.exe`.
-  **Why it's flagged (not a technical failure, but a real side effect)**: This is a blanket kill of *every* Node process on the machine, not just the dev server — it killed 5 node.exe PIDs. Already disclosed to the user in-session; flagging again here in case anything else Node-based (another project, an editor's language server, etc.) needs restarting on the user's machine. **Going forward, prefer killing by the specific PID captured when the background process was started, not a blanket `taskkill /IM node.exe`.**
+- **What was tried**: Trusting `middleware.ts` at the repo root (the Next.js 15 convention) to gate auth, as originally scaffolded in Phase 1.
+  **Why it failed**: Next.js 16 deprecated `middleware.ts`/`export function middleware` in favor of `proxy.ts`/`export function proxy`. The docs (`node_modules/next/dist/docs/.../file-conventions/proxy.md`) claim "all functionality remains the same" for the deprecated convention, but empirically on this install (16.3.6, Turbopack), the old file was **silently never invoked** — confirmed by adding a `console.log` at the top of the handler and seeing it never fire, and by inspecting `.next/dev/server/middleware-manifest.json` which showed `"middleware": {}, "functions": {}` even though the file compiled. **Fix**: renamed to `proxy.ts`, function to `proxy`. That alone still didn't work at the **repo root** — moving it to `src/proxy.ts` (same level as `src/app/`) is what actually made it register and run. This second detail (directory level) is not clearly documented anywhere; discovered by trial.
+- **What was tried**: Leaving the proxy matcher matching all paths including `/api/*`.
+  **Why it failed**: Unauthenticated `POST /api/jobs/analyze` was getting a 307 redirect to `/login` (HTML) instead of the route handler's own `{"error":"Unauthorized"}` JSON 401 — confirmed with curl. This was flagged as a risk in the prior handoff and turned out to be real. **Fix**: matcher now excludes `api`.
+- **What was tried**: Installing the processor's full `requirements.txt` (including `demucs`, which pulls in `torch`) into a local venv to fully runtime-verify `services/processor`.
+  **Why it wasn't done**: This dev machine is severely memory-constrained (`FreePhysicalMemory` observed as low as ~79MB, typically 300MB–6GB free out of 6GB total) — `next build`/`next lint`'s Rust binaries (Turbopack, oxlint) crashed with native OOM errors multiple times this session (`memory allocation of N bytes failed`, `Out of memory: HashMap::Initialize`), always transient and resolved on retry. Installing torch+demucs (multi-GB) was judged too risky/slow for this machine and not necessary to verify code correctness. **Instead**: installed the lighter deps (fastapi, yt-dlp, librosa, numpy, soundfile, supabase, httpx) in a throwaway `.venv` (deleted after use, along with a throwaway `_smoke_test.py`), and confirmed via `TestClient`: 401 on missing/wrong token, 422 on bad `stems` literal, and a full valid `/jobs/click-track` request that correctly progressed through job-status-update logic and only failed at the real network call to a fake Supabase hostname (`getaddrinfo failed`) — proving the code path itself has no bugs. `split.py` only shells out to `python -m demucs.separate` (subprocess), so it never needed Demucs importable locally anyway.
+- **What was tried**: Using `mcp__claude-in-chrome__*` tools to interactively click through the Phase 4 landing page (format picker, drag-and-drop, full download flow) as the standard "test in a browser before reporting done" step.
+  **Why it failed**: `tabs_context_mcp` returned "Browser extension is not connected" — the Chrome extension isn't installed/connected in this environment. **Fallback used**: temporarily bypassed the proxy's auth redirect for just the `/` path (`if (request.nextUrl.pathname === "/") return;` added to `src/proxy.ts`), started the dev server, confirmed via `curl` that `/` now returns 200 with the expected form HTML (`id="youtube-url"`, "Drop an audio file", "Process") and no errors in the dev server log, then **immediately reverted** the bypass and re-confirmed the 307 redirect was restored. This verifies server-side rendering only — click interactions (Select dropdown, drag-and-drop, Realtime job updates) were never exercised in a real browser.
+- **What was tried**: Killing dev servers with a blanket `taskkill //F //IM node.exe`.
+  **Why it's avoided now**: Flagged in the prior handoff as having killed 5 unrelated node processes once. This session consistently used `netstat -ano | grep :3000` → `taskkill //F //PID <specific-pid> //T` instead. Keep doing this.
 
 ## Next Step
 
-**Authenticate the new Supabase MCP server, then restart this session, then resume Phase 2.**
+**Nothing is currently broken or blocking.** The natural next step is **Phase 5 (edit page shell + analyzer header)**, but two manual items the user deferred ("I'll handle manual items later") are worth checking on first since they unblock actually testing anything end-to-end:
 
-1. The user needs to run, in a **regular terminal** (not an IDE extension / not this session — this is an interactive OAuth flow that cannot be done from within a tool call):
-   ```
-   claude /mcp
-   ```
-   Select the `supabase` server (config already written to `.mcp.json`, pointing at `project_ref=tmtydxacbfajdeybwvkb`) and complete the browser sign-in.
-2. This exact `/erar-go-handoff` → restart → (presumably) `/erar-get-handoff` cycle is how the user is resuming, so the next session should start by reading this file, then verify the new MCP connection is live and pointed at the right project:
-   ```
-   mcp__supabase__get_project_url
-   ```
-   Expect `https://tmtydxacbfajdeybwvkb.supabase.co` (or equivalent) — **not** `https://rrfelwwoypouqcjbdzrb.supabase.co`, which is a different, unrelated project that an already-configured *global-scope* `supabase` MCP server points to (see Context & Gotchas — there may be a naming collision between the global and project-scoped `supabase` servers to sort out first).
-3. Once confirmed connected to the right project, proceed with **Phase 2** from the plan (`C:\Users\Arellano\.claude\plans\tingly-wondering-dahl.md`):
-   - Apply migrations for `profiles`, `tracks`, `jobs`, `track_stems` tables + RLS policies (`user_id = auth.uid()` on each) via `mcp__supabase__apply_migration`.
-   - Create storage buckets `raw-uploads` and `processed` (both private) with matching RLS policies, objects keyed under `{user_id}/...`.
-   - Enable email magic-link auth, configure the Redirect URLs allow-list, disable public self-signup (closed team — provision users via dashboard/invite).
-   - Pull the real anon key / service-role key / project URL (`mcp__supabase__get_publishable_keys`, `mcp__supabase__get_project_url`) into `.env.local` (currently all blank).
-   - Run `supabase gen types typescript` (or the MCP equivalent) and try re-parameterizing the three Supabase client constructors with the real generated `Database` type — see whether that resolves the generic-inference issue noted in Failed Attempts, replacing the hand-cast workaround.
-   - Re-test the middleware auth-gating (`npm run dev`, hit `/` unauthenticated, confirm redirect to `/login`) now that real credentials exist.
+1. Ask the user whether they've:
+   - Pasted the Supabase `service_role` secret key into `.env.local`'s `SUPABASE_SERVICE_ROLE_KEY` (Supabase dashboard → Project Settings → API → `service_role`) — and the **same value** into `services/processor/.env`'s `SUPABASE_SERVICE_ROLE_KEY`.
+   - Configured Supabase Auth (dashboard → Authentication): email magic-link enabled, Redirect URLs allow-list includes `http://localhost:3000/auth/callback`, public self-signup disabled.
+2. If yes to both, real end-to-end testing becomes possible for the first time this project — worth doing a real sign-in + landing-page click-through (ideally once the Chrome extension is connected, or ask the user to test manually) before going further, since Phase 4's interactive behavior (Select, drag-drop, Realtime updates) has never actually been exercised, only server-rendered.
+3. Then proceed to **Phase 5** per the plan (`C:\Users\Arellano\.claude\plans\tingly-wondering-dahl.md`):
+   - `src/app/edit/[trackId]/layout.tsx` already exists (Phase 1 stub) and fetches the track + renders the analyzer header badges (key/tempo/time-signature) — but reads the track **once** server-side, with no live updates. Add a Realtime subscription (client component wrapping the badges, or a small client island) so the badges update from "…" to the real analyzed values once `/api/jobs/analyze` (already fired from the landing page) completes, without a full page reload.
+   - Wire the shared wavesurfer instance / audio element mentioned in the plan for Phase 5, used by whichever tab (`trim`/`metronome`/`split`) is active — this is prep for Phase 6.
+
+If the user instead wants to deploy/test the processor for real before continuing (they previously deferred this to Phase 10, but may reconsider once the service-role key is in place), that would mean picking Railway vs Fly.io and doing a real deploy — hold off unless explicitly asked, per the user's own instruction this session.
 
 ## Context & Gotchas
 
-- **The plan file is the spec.** `C:\Users\Arellano\.claude\plans\tingly-wondering-dahl.md` has the full architecture (browser → Next.js API routes → Python processor → Supabase, with a diagram), the complete data model, the library choices (wavesurfer.js + Web Audio API for sync multi-track playback, Zustand, shadcn/ui), and the phase-by-phase task breakdown (Phase 0 Stitch design, 1 scaffolding ✅, 2 Supabase, 3 processor, 4 landing, 5 edit shell, 6 trim, 7 metronome, 8 split, 9 hardening, 10 deploy). Read it before making any architectural decision — don't re-derive.
-- **Two different Supabase MCP servers exist and may collide by name.** There's a pre-existing *global*-scope `supabase` MCP server (already authenticated, tools load fine) pointing at project `rrfelwwoypouqcjbdzrb` — an unrelated/older project, not this one. The user's new project is `tmtydxacbfajdeybwvkb`, and a *project*-scoped `.mcp.json` entry (also named `supabase`) was just added for it this session. Since both are named `supabase`, there is a real risk of ambiguity/collision when Claude Code resolves which one to load after restart — if `mcp__supabase__get_project_url` still returns `rrfelwwoypouqcjbdzrb` after the user authenticates and this session restarts, that's the collision manifesting and it needs to be resolved (e.g. rename one, or confirm project-scope correctly overrides global-scope for the same server name).
-- **Node version is 20.16.0**, but `@supabase/supabase-js` and its sub-packages (`functions-js`, `postgrest-js`, `realtime-js`, `storage-js`) all warn `EBADENGINE` wanting Node ≥22. Also `shadcn@4.21.0` wants Node ≥20.18.1 (we're on 20.16.0, slightly below even that). Everything still works today, but this is a latent upgrade-Node-eventually item, not blocking.
-- **Next.js 16 + Tailwind v4 + Turbopack** — note `next.config.ts` uses Turbopack by default even though scaffolding was run with `--no-turbopack` (the flag may not have applied cleanly to this Next.js version; build output explicitly says "▲ Next.js 16.3.6 (Turbopack)"). Not currently causing problems, just noted in case it matters for later config.
-- **`AGENTS.md` and `CLAUDE.md` in the project root were auto-generated by `create-next-app`** (not written by the assistant this session) — `CLAUDE.md` is only 11 bytes, essentially empty; neither has been reviewed/customized yet.
-- **The middleware matcher** (`middleware.ts`) excludes `_next/static`, `_next/image`, `favicon.ico`, and common image extensions, but matches everything else including `/api/*` — so once real auth is live, double check the `/api/jobs/*` routes' own `requireUser()` check isn't redundant/conflicting with a middleware-level redirect-to-`/login` for API calls (an API route probably should return 401 JSON, not get redirected to an HTML login page — worth a quick look at whether the matcher should exclude `/api/`).
-- **`.env.local` currently has every value blank** (copied verbatim from `.env.example`). Nothing will actually work (auth, DB queries, processor calls) until Phase 2 credentials are filled in.
-- **No git repository exists yet** in `erar-md-tools-web` (confirmed at session start: "Is a git repository: false", and it's still true — nothing in this session initialized git). Nothing has been committed anywhere.
-- **Phase 3 (Python processor)** has no code at all yet — not even a stub directory (`services/processor/` mentioned in the plan doesn't exist on disk). Deployment target (Railway vs Fly.io vs self-host) was never chosen, only that it must be a separate non-serverless service.
-- **dlp-gui reference locations** if algorithm parity is needed later: `dlp_gui/constants.py` has the `TEMPO_CLICK_SCRIPT` (librosa `beat_track` tempo detection with octave-fold correction, Krumhansl-Schmuckler key-finding via `chroma_cqt` + `MAJOR_PROFILE`/`MINOR_PROFILE`, `TIME_SIGNATURE_OVERRIDES`/`TIME_SIGNATURES` heuristic), and `dlp_gui/audio_tools.py` / `dlp_gui/ytdlp_args.py` for format/quality mapping and Spleeter chunking patterns (Spleeter itself is being replaced by Demucs, but the chunking/job-tracking pattern is still a useful reference).
+- **The plan file is the spec.** `C:\Users\Arellano\.claude\plans\tingly-wondering-dahl.md` — read before any architectural decision.
+- **This machine is memory-constrained** (6GB total RAM, observed as low as 79MB free). `next build`, `next lint`, and `next dev` (all Rust/Turbopack-backed) have intermittently crashed with native OOM errors this session — always transient, always succeeded on a plain retry with no code changes. If a build/lint/dev command crashes with a message like `memory allocation of N bytes failed` or `Out of memory: HashMap::Initialize`, just retry it before assuming a real bug.
+- **Next.js 16 renamed `middleware.ts` → `proxy.ts`**, and the file must live at the same directory level as `app/` (`src/proxy.ts` here, since `app` is under `src/`) — not documented anywhere found, discovered empirically this session. If a future Next.js upgrade changes this again, check `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md` first (per `AGENTS.md`'s standing instruction to read version-matched docs before writing code).
+- **Storage path convention** (both Next.js and the Python processor rely on this): every `storage_path` stored anywhere in the DB is `"<bucket>/<user_id>/..."` — bucket name is always the first path segment. `services/processor/app/storage.py`'s `split_storage_path()` and the landing page's `handleDownloadFile()` both parse it this way. Keep this convention if extending storage-touching code.
+- **`jobs.result` is untyped JSONB** (`Record<string, unknown> | null` in TS). The landing page casts it to a local `DownloadResult` interface (`storage_path`, `title`, `filename`, `duration_seconds`) that must match exactly what `services/processor/app/routers/download.py`'s `_do_download()` returns — there's no shared type between the Python and TypeScript sides for job results; keep them manually in sync if either changes.
+- **Two Supabase MCP servers historically existed** (a global one on an unrelated project `rrfelwwoypouqcjbdzrb`, and this project's `tmtydxacbfajdeybwvkb`) — this was flagged as a possible collision risk in the prior handoff but never actually manifested; `mcp__supabase__get_project_url` has consistently returned the correct `tmtydxacbfajdeybwvkb` project all session.
+- **No `Database`-generic issues remain** — the real generated type (`src/types/supabase.ts`) resolved the earlier generic-inference problem cleanly; all three Supabase clients plus the proxy's server client are parameterized with it.
+- **A git repo now exists** (it didn't at the start of the prior session) — user-initiated, remote `https://github.com/erar404/erar-md-tools.git`, exactly one commit ("initial commit") containing everything through most of Phase 2. Nothing since has been committed; do not commit without asking first.
+- **dlp-gui reference locations** if more algorithm parity is needed later: `dlp_gui/constants.py` (`TEMPO_CLICK_SCRIPT`, format tables — already ported), `dlp_gui/audio_tools.py` (Spleeter chunking/job-tracking patterns — not used, since Demucs doesn't need chunking), `dlp_gui/ytdlp_args.py` (CLI-arg version of the format mapping — the processor uses the Python-API equivalent instead, `app/ytdlp_formats.py`).
