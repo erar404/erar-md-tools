@@ -15,8 +15,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: process.env.NEXT_PUBLIC_AUTH_REDIRECT_URL
+    ? new URL(process.env.NEXT_PUBLIC_AUTH_REDIRECT_URL)
+    : undefined,
   title: "MD Tools",
   description: "Audio workflow utilities for music directors",
+  openGraph: {
+    title: "MD Tools",
+    description: "Audio workflow utilities for music directors",
+    siteName: "MD Tools",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

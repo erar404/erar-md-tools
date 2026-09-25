@@ -22,5 +22,9 @@ TMP_DIR = os.environ.get("PROCESSOR_TMP_DIR", "/tmp/md-tools-processor")
 DEMUCS_MODEL = os.environ.get("DEMUCS_MODEL", "htdemucs")
 FFMPEG_PATH = os.environ.get("FFMPEG_PATH", "ffmpeg")
 
+# Small-team scope, but still worth a basic cap on yt-dlp source size —
+# protects the processor's disk/memory from an unexpectedly huge source.
+MAX_DOWNLOAD_BYTES = int(os.environ.get("MAX_DOWNLOAD_BYTES", 500 * 1024 * 1024))
+
 RAW_UPLOADS_BUCKET = "raw-uploads"
 PROCESSED_BUCKET = "processed"

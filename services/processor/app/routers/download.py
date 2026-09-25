@@ -10,7 +10,7 @@ import yt_dlp
 from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel
 
-from ..config import RAW_UPLOADS_BUCKET
+from ..config import MAX_DOWNLOAD_BYTES, RAW_UPLOADS_BUCKET
 from ..jobs import run_job
 from ..security import verify_service_token
 from ..storage import upload_file
@@ -35,7 +35,14 @@ def _do_download(
 
     output_template = str(tmp_dir / "%(title).200B.%(ext)s")
     ydl_opts = build_ydl_opts(format, quality or "best", output_template)
-    ydl_opts.update({"quiet": True, "no_warnings": True, "noplaylist": True})
+    ydl_opts.update(
+        {
+            "quiet": True,
+            "no_warnings": True,
+            "noplaylist": True,
+            "max_filesize": MAX_DOWNLOAD_BYTES,
+        }
+    )
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(youtube_url, download=True)

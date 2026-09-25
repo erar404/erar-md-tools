@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2Icon, UploadIcon } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { createSignedDownloadUrl } from "@/lib/storage-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +31,8 @@ interface DownloadResult {
   filename: string;
   duration_seconds: number | null;
 }
+
+const MAX_UPLOAD_BYTES = 300 * 1024 * 1024;
 
 /** Best-effort — the edit page just shows "…" for key/tempo/time until
  * this succeeds, so a failure here isn't fatal to the landing flow. */
@@ -88,6 +91,10 @@ export function LandingFlow() {
   }
 
   function handleFileChosen(chosen: File) {
+    if (chosen.size > MAX_UPLOAD_BYTES) {
+      toast.error(`File is too large — max ${Math.round(MAX_UPLOAD_BYTES / (1024 * 1024))}MB.`);
+      return;
+    }
     setFile(chosen);
     setYoutubeUrl("");
     setShowFormatPicker(false);
@@ -198,14 +205,11 @@ export function LandingFlow() {
   async function handleDownloadFile() {
     if (!job?.result) return;
     const result = job.result as unknown as DownloadResult;
-    const [bucket, ...rest] = result.storage_path.split("/");
-    const key = rest.join("/");
-    const { data, error } = await supabase.storage.from(bucket).createSignedUrl(key, 3600);
-    if (error || !data) {
+    try {
+      window.location.href = await createSignedDownloadUrl(supabase, result.storage_path);
+    } catch {
       toast.error("Could not create a download link");
-      return;
     }
-    window.location.href = data.signedUrl;
   }
 
   function reset() {

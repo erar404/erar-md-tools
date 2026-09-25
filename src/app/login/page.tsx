@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +37,8 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-full flex-1 items-center justify-center p-6">
+    <main className="flex min-h-full flex-1 flex-col items-center justify-center gap-6 p-6">
+      <Image src="/erar-full.png" alt="" width={166} height={180} priority />
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>MD Tools</CardTitle>

@@ -7,16 +7,19 @@ export async function POST(request: Request) {
   const auth = await requireUser();
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { youtube_url, format, quality } = await request.json();
-  if (!youtube_url || !format) {
-    return NextResponse.json({ error: "youtube_url and format are required" }, { status: 400 });
+  const { track_id, stems } = await request.json();
+  if (!track_id || !Array.isArray(stems) || stems.length === 0) {
+    return NextResponse.json(
+      { error: "track_id and a non-empty stems array are required" },
+      { status: 400 }
+    );
   }
 
   const capacityError = await checkJobCapacity(auth.supabase, auth.user.id);
   if (capacityError) return capacityError;
 
-  const job = await createJob(auth.supabase, auth.user.id, "download", { youtube_url, format, quality });
-  await callProcessor("/jobs/download", { job_id: job.id, youtube_url, format, quality });
+  const job = await createJob(auth.supabase, auth.user.id, "mixdown", { stems }, track_id);
+  await callProcessor("/jobs/mixdown", { job_id: job.id, stems });
 
   return NextResponse.json({ job });
 }
