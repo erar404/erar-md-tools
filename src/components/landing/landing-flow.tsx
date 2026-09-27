@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Loader2Icon, UploadIcon } from "lucide-react";
+import { SearchIcon, UploadIcon } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { createSignedDownloadUrl } from "@/lib/storage-client";
@@ -33,6 +33,14 @@ interface DownloadResult {
   title: string;
   filename: string;
   duration_seconds: number | null;
+}
+
+interface YoutubeSearchResult {
+  videoId: string;
+  title: string;
+  channelTitle: string;
+  thumbnail: string;
+  duration: string;
 }
 
 const MAX_UPLOAD_BYTES = 300 * 1024 * 1024;
@@ -68,6 +76,11 @@ export function LandingFlow() {
   const [continuing, setContinuing] = useState(false);
   const [downloadingFile, setDownloadingFile] = useState(false);
 
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<YoutubeSearchResult[] | null>(null);
+  const [searching, setSearching] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useJobStatus(supabase, job, setJob);
@@ -93,6 +106,30 @@ export function LandingFlow() {
     setShowFormatPicker(false);
     setJob(null);
     if (value) resetFile();
+  }
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    try {
+      const res = await fetch(`/api/youtube/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Search failed");
+      setSearchResults(data.results as YoutubeSearchResult[]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Search failed");
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  function handleSelectSearchResult(result: YoutubeSearchResult) {
+    handleUrlChange(`https://www.youtube.com/watch?v=${result.videoId}`);
+    setShowSearch(false);
+    setSearchResults(null);
+    setSearchQuery("");
+    setShowFormatPicker(true);
   }
 
   async function handleProcess() {
@@ -218,8 +255,15 @@ export function LandingFlow() {
     return (
       <div className="space-y-4">
         {job.status !== "done" && job.status !== "error" && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2Icon className="size-4 animate-spin" />
+          <div className="flex flex-col items-center gap-2 py-2 text-sm text-muted-foreground">
+            <Image
+              src="/happy-logo-animated.gif"
+              alt=""
+              width={96}
+              height={96}
+              unoptimized
+              className="rounded-full"
+            />
             {job.status === "pending" ? "Queued…" : "Downloading…"}
           </div>
         )}
@@ -290,6 +334,78 @@ export function LandingFlow() {
           onChange={(e) => handleUrlChange(e.target.value)}
         />
       </div>
+
+      {!showSearch ? (
+        <button
+          type="button"
+          onClick={() => setShowSearch(true)}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        >
+          <SearchIcon className="size-3.5" />
+          Don&rsquo;t have a link? Search YouTube instead.
+        </button>
+      ) : (
+        <div className="space-y-3 rounded-lg border border-border/60 bg-card p-3">
+          <form onSubmit={handleSearch} className="flex gap-2">
+            <Input
+              placeholder="Search by title, artist…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+            />
+            <Button type="submit" disabled={searching} size="sm">
+              {searching ? "Searching…" : "Search"}
+            </Button>
+          </form>
+
+          {searchResults && (
+            <ul className="max-h-72 space-y-1 overflow-y-auto">
+              {searchResults.length === 0 ? (
+                <li className="py-2 text-center text-xs text-muted-foreground">
+                  No results — try a different search.
+                </li>
+              ) : (
+                searchResults.map((result) => (
+                  <li key={result.videoId}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectSearchResult(result)}
+                      className="flex w-full items-center gap-3 rounded-md p-1.5 text-left hover:bg-accent"
+                    >
+                      {result.thumbnail && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={result.thumbnail}
+                          alt=""
+                          className="h-12 w-20 shrink-0 rounded object-cover"
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{result.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {result.channelTitle}
+                          {result.duration ? ` · ${result.duration}` : ""}
+                        </p>
+                      </div>
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setShowSearch(false);
+              setSearchResults(null);
+            }}
+            className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            Back to pasting a link
+          </button>
+        </div>
+      )}
 
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
         <span className="h-px flex-1 bg-border" />
