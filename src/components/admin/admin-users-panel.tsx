@@ -36,6 +36,10 @@ export function AdminUsersPanel() {
   }
 
   useEffect(() => {
+    // Intentional fetch-on-mount; `load` is also called again after
+    // save/delete actions, so it stays a shared named function rather than
+    // being inlined here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, []);
 

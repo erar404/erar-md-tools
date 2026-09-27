@@ -24,6 +24,9 @@ export function AdminAffiliationRequestsPanel() {
   }
 
   useEffect(() => {
+    // Intentional fetch-on-mount; `load` is also called again after
+    // approve/reject actions, so it stays a shared named function.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, []);
 
