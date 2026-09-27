@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Loader2Icon, UploadIcon } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { createSignedDownloadUrl } from "@/lib/storage-client";
+import { useJobStatus } from "@/lib/use-job-status";
+import { explainJobError } from "@/lib/job-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,24 +69,7 @@ export function LandingFlow() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Live job status instead of polling — matches the app's architecture
-  // (Realtime subscription on `jobs`, enabled in Phase 4's migration).
-  useEffect(() => {
-    if (!job || job.status === "done" || job.status === "error") return;
-
-    const channel = supabase
-      .channel(`job-${job.id}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "jobs", filter: `id=eq.${job.id}` },
-        (payload) => setJob(payload.new as Job)
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [job, supabase]);
+  useJobStatus(supabase, job, setJob);
 
   function resetFile() {
     setFile(null);
@@ -230,9 +216,24 @@ export function LandingFlow() {
         )}
         {job.status === "error" && (
           <div className="space-y-3">
-            <p className="text-sm text-destructive">
-              {job.error_message ?? "Download failed."}
-            </p>
+            {(() => {
+              const { summary, cause } = explainJobError(job.error_message);
+              return (
+                <div className="flex items-start gap-2">
+                  <Image
+                    src="/sad-logo.png"
+                    alt=""
+                    width={32}
+                    height={32}
+                    className="mt-0.5 rounded-full"
+                  />
+                  <div className="space-y-1">
+                    <p className="text-sm text-destructive">{summary}</p>
+                    {cause && <p className="text-xs text-muted-foreground">{cause}</p>}
+                  </div>
+                </div>
+              );
+            })()}
             <Button variant="outline" onClick={reset} className="w-full">
               Try again
             </Button>

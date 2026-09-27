@@ -8,6 +8,7 @@ import { useTrackAudio } from "@/components/edit/track-audio-provider";
 import { JobStatusButton } from "@/components/edit/job-status-button";
 import { createClient } from "@/lib/supabase/client";
 import { createSignedDownloadUrl } from "@/lib/storage-client";
+import { useJobStatus } from "@/lib/use-job-status";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -82,37 +83,8 @@ export default function SplitPage() {
     [soloed, muted, volumes]
   );
 
-  // Live status for the split job.
-  useEffect(() => {
-    if (!splitJob || splitJob.status === "done" || splitJob.status === "error") return;
-    const channel = supabase
-      .channel(`job-${splitJob.id}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "jobs", filter: `id=eq.${splitJob.id}` },
-        (payload) => setSplitJob(payload.new as Job)
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [splitJob, supabase]);
-
-  // Live status for the mixdown job.
-  useEffect(() => {
-    if (!mixdownJob || mixdownJob.status === "done" || mixdownJob.status === "error") return;
-    const channel = supabase
-      .channel(`job-${mixdownJob.id}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "jobs", filter: `id=eq.${mixdownJob.id}` },
-        (payload) => setMixdownJob(payload.new as Job)
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [mixdownJob, supabase]);
+  useJobStatus(supabase, splitJob, setSplitJob);
+  useJobStatus(supabase, mixdownJob, setMixdownJob);
 
   // Once the split completes, resolve signed URLs and build the shared
   // Web Audio playback graph (decoded sequentially — this machine is

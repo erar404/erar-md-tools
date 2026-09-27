@@ -11,6 +11,7 @@ import { JobStatusButton } from "@/components/edit/job-status-button";
 import { createClient } from "@/lib/supabase/client";
 import { createSignedDownloadUrl } from "@/lib/storage-client";
 import { formatMsTime } from "@/lib/format-time";
+import { useJobStatus } from "@/lib/use-job-status";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,23 +90,7 @@ export default function TrimPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioUrl]);
 
-  // Live job status instead of polling — same pattern as the landing flow.
-  useEffect(() => {
-    if (!job || job.status === "done" || job.status === "error") return;
-
-    const channel = supabase
-      .channel(`job-${job.id}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "jobs", filter: `id=eq.${job.id}` },
-        (payload) => setJob(payload.new as Job)
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [job, supabase]);
+  useJobStatus(supabase, job, setJob);
 
   function handleStartChange(value: number) {
     const clamped = Math.min(Math.max(0, value), endMs - MIN_LENGTH_MS);

@@ -7,6 +7,7 @@ import { useTrackAudio } from "@/components/edit/track-audio-provider";
 import { JobStatusButton } from "@/components/edit/job-status-button";
 import { createClient } from "@/lib/supabase/client";
 import { createSignedDownloadUrl } from "@/lib/storage-client";
+import { useJobStatus } from "@/lib/use-job-status";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -87,21 +88,7 @@ export default function MetronomePage() {
     };
   }, [audioRef]);
 
-  // Live job status instead of polling — same pattern as trim/landing.
-  useEffect(() => {
-    if (!job || job.status === "done" || job.status === "error") return;
-    const channel = supabase
-      .channel(`job-${job.id}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "jobs", filter: `id=eq.${job.id}` },
-        (payload) => setJob(payload.new as Job)
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [job, supabase]);
+  useJobStatus(supabase, job, setJob);
 
   // Client-side Web Audio preview — separate from the server-rendered
   // downloads, so the user can audition tempo/accent changes instantly.

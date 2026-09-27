@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Loader2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { explainJobError } from "@/lib/job-error";
 import type { Job } from "@/types/database";
 
 // Shared idle/pending/processing/error rendering for the Trim/Metronome/Split
@@ -39,12 +40,25 @@ export function JobStatusButton({
       <Button onClick={onStart} disabled={submitting || disabled} className={className}>
         {submitting ? "Starting…" : idleLabel}
       </Button>
-      {job?.status === "error" && (
-        <div className="mt-2 flex items-center gap-2 text-sm text-destructive">
-          <Image src="/sad-logo.png" alt="" width={28} height={28} className="rounded-full" />
-          <p>{job.error_message ?? "Something went wrong."}</p>
-        </div>
-      )}
+      {job?.status === "error" &&
+        (() => {
+          const { summary, cause } = explainJobError(job.error_message);
+          return (
+            <div className="mt-2 flex items-start gap-2">
+              <Image
+                src="/sad-logo.png"
+                alt=""
+                width={28}
+                height={28}
+                className="mt-0.5 rounded-full"
+              />
+              <div className="space-y-1">
+                <p className="text-sm text-destructive">{summary}</p>
+                {cause && <p className="text-xs text-muted-foreground">{cause}</p>}
+              </div>
+            </div>
+          );
+        })()}
     </>
   );
 }
