@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { SearchIcon, UploadIcon } from "lucide-react";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { createSignedDownloadUrl } from "@/lib/storage-client";
 import { useJobStatus } from "@/lib/use-job-status";
+import { TipJarModal } from "@/components/landing/tip-jar-modal";
 import { explainJobError } from "@/lib/job-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,9 +82,20 @@ export function LandingFlow() {
   const [searchResults, setSearchResults] = useState<YoutubeSearchResult[] | null>(null);
   const [searching, setSearching] = useState(false);
 
+  const [showTipJar, setShowTipJar] = useState(false);
+  const tipJarShownForJobId = useRef<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useJobStatus(supabase, job, setJob);
+
+  // Celebrate a successful download once per job, not every re-render/refetch.
+  useEffect(() => {
+    if (job?.status === "done" && tipJarShownForJobId.current !== job.id) {
+      tipJarShownForJobId.current = job.id;
+      setShowTipJar(true);
+    }
+  }, [job?.status, job?.id]);
 
   function resetFile() {
     setFile(null);
@@ -319,6 +331,7 @@ export function LandingFlow() {
             </Button>
           </div>
         )}
+        <TipJarModal open={showTipJar} onOpenChange={setShowTipJar} />
       </div>
     );
   }
