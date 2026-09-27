@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      affiliation_requests: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          requested_by_email: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          note?: string | null
+          requested_by_email: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          note?: string | null
+          requested_by_email?: string
+          status?: string
+        }
+        Relationships: []
+      }
       affiliations: {
         Row: {
           created_at: string
@@ -89,6 +116,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          is_admin: boolean
           role: string | null
         }
         Insert: {
@@ -97,6 +125,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id: string
+          is_admin?: boolean
           role?: string | null
         }
         Update: {
@@ -105,6 +134,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          is_admin?: boolean
           role?: string | null
         }
         Relationships: [

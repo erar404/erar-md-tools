@@ -53,6 +53,7 @@ export default async function EditLayout({
                   email={userData.user.email ?? ""}
                   displayName={userProfile?.display_name ?? null}
                   avatarUrl={userProfile?.avatar_url}
+                  isAdmin={userProfile?.is_admin}
                 />
               )}
             </div>

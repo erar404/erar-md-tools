@@ -41,6 +41,7 @@ export default async function LibraryPage() {
         email={user.email ?? ""}
         displayName={resolvedProfile?.display_name ?? null}
         avatarUrl={resolvedProfile?.avatar_url}
+        isAdmin={resolvedProfile?.is_admin}
       />
       <main className="mx-auto w-full max-w-3xl flex-1 space-y-8 p-6">
         <Card>

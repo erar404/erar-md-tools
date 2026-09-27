@@ -24,6 +24,7 @@ export default async function LandingPage() {
           email={user.email ?? ""}
           displayName={profile?.display_name ?? null}
           avatarUrl={profile?.avatar_url}
+          isAdmin={profile?.is_admin}
         />
       )}
       <main className="flex flex-1 flex-col items-center justify-center gap-6 p-6">

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { LogOutIcon, UserIcon, LibraryIcon } from "lucide-react";
+import { LogOutIcon, UserIcon, LibraryIcon, ShieldIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,7 +11,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -50,10 +49,12 @@ export function UserMenu({
   email,
   displayName,
   avatarUrl,
+  isAdmin,
 }: {
   email: string;
   displayName: string | null;
   avatarUrl?: string | null;
+  isAdmin?: boolean;
 }) {
   const router = useRouter();
 
@@ -78,7 +79,11 @@ export function UserMenu({
         <span className="hidden max-w-32 truncate sm:inline">{label}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel className="truncate">{email}</DropdownMenuLabel>
+        {/* Static text, not an interactive group — base-ui's GroupLabel
+            requires a <Menu.Group> ancestor, which this isn't. */}
+        <div className="truncate px-1.5 py-1 text-xs font-medium text-muted-foreground">
+          {email}
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuLinkItem href="/library">
           <LibraryIcon /> Library
@@ -86,6 +91,11 @@ export function UserMenu({
         <DropdownMenuLinkItem href="/profile">
           <UserIcon /> Profile
         </DropdownMenuLinkItem>
+        {isAdmin && (
+          <DropdownMenuLinkItem href="/admin">
+            <ShieldIcon /> Admin
+          </DropdownMenuLinkItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={handleSignOut}>
           <LogOutIcon /> Log out

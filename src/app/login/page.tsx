@@ -31,6 +31,13 @@ export default function LoginPage() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [requestName, setRequestName] = useState("");
+  const [requestEmail, setRequestEmail] = useState("");
+  const [requestNote, setRequestNote] = useState("");
+  const [requestSending, setRequestSending] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
+
   useEffect(() => {
     supabase
       .from("affiliations")
@@ -70,6 +77,24 @@ export default function LoginPage() {
     }
 
     setSent(true);
+  }
+
+  async function handleRequestAffiliation(e: React.FormEvent) {
+    e.preventDefault();
+    setRequestSending(true);
+    try {
+      const { error } = await supabase.from("affiliation_requests").insert({
+        name: requestName.trim(),
+        requested_by_email: requestEmail.trim(),
+        note: requestNote.trim() || null,
+      });
+      if (error) throw error;
+      setRequestSent(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not submit request");
+    } finally {
+      setRequestSending(false);
+    }
   }
 
   return (
@@ -136,6 +161,79 @@ export default function LoginPage() {
           )}
         </CardContent>
       </Card>
+
+      {!sent && (
+        <div className="w-full max-w-sm text-sm">
+          {!showRequestForm ? (
+            <button
+              type="button"
+              onClick={() => setShowRequestForm(true)}
+              className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Don&rsquo;t see your affiliation? Request it be added.
+            </button>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-heading text-base">Request an affiliation</CardTitle>
+                {requestSent ? (
+                  <CardDescription className="flex items-center gap-2 pt-1">
+                    <Image
+                      src="/happy-logo.png"
+                      alt=""
+                      width={24}
+                      height={24}
+                      className="rounded-full"
+                    />
+                    Sent — an admin will review it.
+                  </CardDescription>
+                ) : (
+                  <CardDescription>An admin will review and approve it.</CardDescription>
+                )}
+              </CardHeader>
+              {!requestSent && (
+                <CardContent>
+                  <form onSubmit={handleRequestAffiliation} className="space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="request-name">Affiliation name</Label>
+                      <Input
+                        id="request-name"
+                        required
+                        value={requestName}
+                        onChange={(e) => setRequestName(e.target.value)}
+                        placeholder="e.g. Grace Community Choir"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="request-email">Your email</Label>
+                      <Input
+                        id="request-email"
+                        type="email"
+                        required
+                        value={requestEmail}
+                        onChange={(e) => setRequestEmail(e.target.value)}
+                        placeholder="you@example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="request-note">Note (optional)</Label>
+                      <Input
+                        id="request-note"
+                        value={requestNote}
+                        onChange={(e) => setRequestNote(e.target.value)}
+                        placeholder="Anything that helps us verify you"
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={requestSending}>
+                      {requestSending ? "Sending…" : "Submit request"}
+                    </Button>
+                  </form>
+                </CardContent>
+              )}
+            </Card>
+          )}
+        </div>
+      )}
     </main>
   );
 }

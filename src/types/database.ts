@@ -25,6 +25,18 @@ export interface Profile {
   avatar_url: string | null;
   role: string | null;
   affiliation_id: string | null;
+  is_admin: boolean;
+  created_at: string;
+}
+
+export type AffiliationRequestStatus = "pending" | "approved" | "rejected";
+
+export interface AffiliationRequest {
+  id: string;
+  name: string;
+  requested_by_email: string;
+  note: string | null;
+  status: AffiliationRequestStatus;
   created_at: string;
 }
 

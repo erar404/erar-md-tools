@@ -22,6 +22,7 @@ export default async function ProfilePage() {
     avatar_url: null,
     role: null,
     affiliation_id: null,
+    is_admin: false,
     created_at: user.created_at,
   };
 
@@ -31,6 +32,7 @@ export default async function ProfilePage() {
         email={user.email ?? ""}
         displayName={resolvedProfile.display_name}
         avatarUrl={resolvedProfile.avatar_url}
+        isAdmin={resolvedProfile.is_admin}
       />
       <main className="mx-auto w-full max-w-lg flex-1 p-6">
         <ProfileForm
