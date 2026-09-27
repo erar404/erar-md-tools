@@ -63,7 +63,13 @@ def analyze(
     if min_bpm > max_bpm:
         min_bpm, max_bpm = max_bpm, min_bpm
 
-    y, sr = librosa.load(str(audio_path), sr=None, mono=True)
+    # Fixed 22.05kHz rather than the source's native rate: tempo/chroma/onset
+    # features don't need full bandwidth, and loading at e.g. 48/96kHz was
+    # inflating memory enough to get this service OOM-killed mid-analysis
+    # (observed in production — the analyze job would hang at "processing"
+    # forever since a killed container abandons in-flight background tasks
+    # with no exception ever raised).
+    y, sr = librosa.load(str(audio_path), sr=22050, mono=True)
 
     # --- Tempo ---------------------------------------------------------
     # Only the single overall tempo estimate is trusted (not the raw,

@@ -132,7 +132,13 @@ export default function TrimPage() {
     setDownloading(true);
     try {
       const result = job.result as unknown as TrimResult;
-      window.location.href = await createSignedDownloadUrl(supabase, result.storage_path);
+      const ext = result.storage_path.split(".").pop();
+      window.location.href = await createSignedDownloadUrl(
+        supabase,
+        result.storage_path,
+        undefined,
+        `${track.title} (trimmed).${ext}`
+      );
     } catch {
       toast.error("Could not create a download link");
     } finally {

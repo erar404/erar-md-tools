@@ -269,7 +269,15 @@ export default function SplitPage() {
   async function handleDownloadStem(stem: StemInfo) {
     setDownloadingStem(stem.name);
     try {
-      window.location.assign(await createSignedDownloadUrl(supabase, stem.storagePath));
+      const ext = stem.storagePath.split(".").pop();
+      window.location.assign(
+        await createSignedDownloadUrl(
+          supabase,
+          stem.storagePath,
+          undefined,
+          `${track.title} (${stem.name}).${ext}`
+        )
+      );
     } catch {
       toast.error("Could not create a download link");
     } finally {
@@ -307,7 +315,15 @@ export default function SplitPage() {
     if (!mixdownResult) return;
     setDownloadingMixdown(true);
     try {
-      window.location.assign(await createSignedDownloadUrl(supabase, mixdownResult.storage_path));
+      const ext = mixdownResult.storage_path.split(".").pop();
+      window.location.assign(
+        await createSignedDownloadUrl(
+          supabase,
+          mixdownResult.storage_path,
+          undefined,
+          `${track.title} (mixdown).${ext}`
+        )
+      );
     } catch {
       toast.error("Could not create a download link");
     } finally {

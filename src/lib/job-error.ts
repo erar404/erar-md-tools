@@ -36,7 +36,7 @@ export function explainJobError(message: string | null | undefined): {
     return {
       summary: raw,
       cause:
-        "YouTube is temporarily blocking automated downloads from our server's IP address. This usually clears up on its own — try again in a few minutes.",
+        "YouTube is flagging our server's IP address as a bot. Retrying sometimes works, but this can persist for datacenter IPs — if it keeps happening, an admin needs to set up cookies from a signed-in YouTube session on the processor (YTDLP_COOKIES).",
     };
   }
 

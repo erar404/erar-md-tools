@@ -10,7 +10,7 @@ import yt_dlp
 from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel
 
-from ..config import MAX_DOWNLOAD_BYTES, RAW_UPLOADS_BUCKET
+from ..config import MAX_DOWNLOAD_BYTES, RAW_UPLOADS_BUCKET, YTDLP_COOKIES_PATH
 from ..jobs import run_job
 from ..security import verify_service_token
 from ..storage import upload_file
@@ -41,8 +41,14 @@ def _do_download(
             "no_warnings": True,
             "noplaylist": True,
             "max_filesize": MAX_DOWNLOAD_BYTES,
+            # "Sign in to confirm you're not a bot" mitigation: the android
+            # client rarely triggers it and doesn't need cookies; web is
+            # kept as a fallback for formats android sometimes lacks.
+            "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
         }
     )
+    if YTDLP_COOKIES_PATH:
+        ydl_opts["cookiefile"] = YTDLP_COOKIES_PATH
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(youtube_url, download=True)

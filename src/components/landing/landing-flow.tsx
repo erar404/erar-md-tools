@@ -66,6 +66,7 @@ export function LandingFlow() {
   const [job, setJob] = useState<Job | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [continuing, setContinuing] = useState(false);
+  const [downloadingFile, setDownloadingFile] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -191,10 +192,18 @@ export function LandingFlow() {
   async function handleDownloadFile() {
     if (!job?.result) return;
     const result = job.result as unknown as DownloadResult;
+    setDownloadingFile(true);
     try {
-      window.location.href = await createSignedDownloadUrl(supabase, result.storage_path);
+      window.location.href = await createSignedDownloadUrl(
+        supabase,
+        result.storage_path,
+        undefined,
+        result.filename
+      );
     } catch {
       toast.error("Could not create a download link");
+    } finally {
+      setDownloadingFile(false);
     }
   }
 
@@ -243,12 +252,22 @@ export function LandingFlow() {
           <div className="space-y-3">
             <p className="text-sm">Download complete.</p>
             {isEditableFormat(format) ? (
-              <Button onClick={handleContinueToEdit} disabled={continuing} className="w-full">
-                {continuing ? "Opening…" : "Continue to Edit"}
-              </Button>
+              <>
+                <Button onClick={handleContinueToEdit} disabled={continuing} className="w-full">
+                  {continuing ? "Opening…" : "Continue to Edit"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleDownloadFile}
+                  disabled={downloadingFile}
+                  className="w-full"
+                >
+                  {downloadingFile ? "Preparing…" : "Just download the file"}
+                </Button>
+              </>
             ) : (
-              <Button onClick={handleDownloadFile} className="w-full">
-                Download file
+              <Button onClick={handleDownloadFile} disabled={downloadingFile} className="w-full">
+                {downloadingFile ? "Preparing…" : "Download file"}
               </Button>
             )}
             <Button variant="ghost" onClick={reset} className="w-full">

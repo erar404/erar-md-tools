@@ -45,6 +45,8 @@ export default function MetronomePage() {
   const [noAccent, setNoAccent] = useState(false);
   const [isTrackPlaying, setIsTrackPlaying] = useState(false);
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
+  const [isCombinedPlaying, setIsCombinedPlaying] = useState(false);
+  const isCombinedPlayingRef = useRef(false);
 
   const [job, setJob] = useState<Job | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -72,12 +74,17 @@ export default function MetronomePage() {
   }, [noAccent]);
 
   // Tap-tempo is only meaningful while the source is playing, so the button
-  // tracks the shared <audio> element's play state instead of its own.
+  // tracks the shared <audio> element's play state instead of its own. Also
+  // stops the click engine if the source gets paused from elsewhere (e.g.
+  // the Trim tab's transport), so the click doesn't keep ticking alone.
   useEffect(() => {
     const el = audioRef.current;
     if (!el) return;
     const onPlay = () => setIsTrackPlaying(true);
-    const onPause = () => setIsTrackPlaying(false);
+    const onPause = () => {
+      setIsTrackPlaying(false);
+      if (isCombinedPlayingRef.current) stopCombined();
+    };
     el.addEventListener("play", onPlay);
     el.addEventListener("pause", onPause);
     el.addEventListener("ended", onPause);
@@ -86,6 +93,7 @@ export default function MetronomePage() {
       el.removeEventListener("pause", onPause);
       el.removeEventListener("ended", onPause);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioRef]);
 
   useJobStatus(supabase, job, setJob);
@@ -121,11 +129,23 @@ export default function MetronomePage() {
     timerRef.current = window.setTimeout(scheduler, 25);
   }
 
-  function stopPreview() {
+  function stopClickEngine() {
     if (timerRef.current != null) window.clearTimeout(timerRef.current);
     timerRef.current = null;
     void audioCtxRef.current?.close();
     audioCtxRef.current = null;
+  }
+
+  function startClickEngine() {
+    const ctx = new AudioContext();
+    audioCtxRef.current = ctx;
+    nextNoteTimeRef.current = ctx.currentTime + 0.05;
+    currentBeatRef.current = 0;
+    scheduler();
+  }
+
+  function stopPreview() {
+    stopClickEngine();
     setIsPreviewPlaying(false);
   }
 
@@ -134,15 +154,40 @@ export default function MetronomePage() {
       stopPreview();
       return;
     }
-    const ctx = new AudioContext();
-    audioCtxRef.current = ctx;
-    nextNoteTimeRef.current = ctx.currentTime + 0.05;
-    currentBeatRef.current = 0;
+    if (isCombinedPlaying) stopCombined();
+    startClickEngine();
     setIsPreviewPlaying(true);
-    scheduler();
   }
 
-  useEffect(() => stopPreview, []);
+  // Plays the click alongside the actual source audio, so you can judge by
+  // ear whether the detected tempo actually matches the song — the click
+  // and the <audio> element are two independent clocks (Web Audio vs. the
+  // native media element), so this is a by-ear sanity check, not
+  // sample-accurate sync.
+  function stopCombined() {
+    stopClickEngine();
+    audioRef.current?.pause();
+    setIsCombinedPlaying(false);
+  }
+
+  function toggleCombined() {
+    if (isCombinedPlaying) {
+      stopCombined();
+      return;
+    }
+    const el = audioRef.current;
+    if (!el) return;
+    if (isPreviewPlaying) stopPreview();
+    startClickEngine();
+    void el.play();
+    setIsCombinedPlaying(true);
+  }
+
+  useEffect(() => {
+    isCombinedPlayingRef.current = isCombinedPlaying;
+  }, [isCombinedPlaying]);
+
+  useEffect(() => stopClickEngine, []);
 
   function handleTap() {
     const now = performance.now();
@@ -189,7 +234,14 @@ export default function MetronomePage() {
   async function handleDownload(kind: "click" | "merged", storagePath: string) {
     setDownloading(kind);
     try {
-      window.location.href = await createSignedDownloadUrl(supabase, storagePath);
+      const ext = storagePath.split(".").pop();
+      const suffix = kind === "click" ? "click" : "click + song";
+      window.location.href = await createSignedDownloadUrl(
+        supabase,
+        storagePath,
+        undefined,
+        `${track.title} (${suffix}).${ext}`
+      );
     } catch {
       toast.error("Could not create a download link");
     } finally {
@@ -228,7 +280,27 @@ export default function MetronomePage() {
               {multiplier !== 1 ? ` · ${multiplier}×` : ""}
             </div>
           </div>
+          <Button
+            type="button"
+            variant={isCombinedPlaying ? "default" : "outline"}
+            onClick={toggleCombined}
+            className="ml-auto"
+          >
+            {isCombinedPlaying ? (
+              <>
+                <PauseIcon className="size-4" /> Stop
+              </>
+            ) : (
+              <>
+                <PlayIcon className="size-4" /> Play with song
+              </>
+            )}
+          </Button>
         </div>
+        <p className="-mt-4 text-xs text-muted-foreground">
+          Use &ldquo;Play with song&rdquo; to hear the click against the actual track and check
+          the detected tempo sounds right.
+        </p>
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div className="space-y-2">

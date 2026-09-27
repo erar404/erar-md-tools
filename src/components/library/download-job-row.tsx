@@ -33,7 +33,12 @@ export function DownloadJobRow({ job }: { job: Job }) {
     setDownloading(true);
     try {
       const supabase = createClient();
-      window.location.href = await createSignedDownloadUrl(supabase, result.storage_path);
+      window.location.href = await createSignedDownloadUrl(
+        supabase,
+        result.storage_path,
+        undefined,
+        result.filename
+      );
     } catch {
       toast.error("Could not create a download link — the file may have expired.");
     } finally {
