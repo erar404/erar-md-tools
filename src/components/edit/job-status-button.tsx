@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Loader2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Job } from "@/types/database";
@@ -39,9 +40,10 @@ export function JobStatusButton({
         {submitting ? "Starting…" : idleLabel}
       </Button>
       {job?.status === "error" && (
-        <p className="mt-2 text-sm text-destructive">
-          {job.error_message ?? "Something went wrong."}
-        </p>
+        <div className="mt-2 flex items-center gap-2 text-sm text-destructive">
+          <Image src="/sad-logo.png" alt="" width={28} height={28} className="rounded-full" />
+          <p>{job.error_message ?? "Something went wrong."}</p>
+        </div>
       )}
     </>
   );

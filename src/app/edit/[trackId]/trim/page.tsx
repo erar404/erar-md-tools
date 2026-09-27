@@ -11,13 +11,13 @@ import { JobStatusButton } from "@/components/edit/job-status-button";
 import { createClient } from "@/lib/supabase/client";
 import { createSignedDownloadUrl } from "@/lib/storage-client";
 import { formatMsTime } from "@/lib/format-time";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Job } from "@/types/database";
 
-const REGION_COLOR = "rgba(239, 68, 68, 0.2)";
+const REGION_COLOR = "rgba(212, 163, 89, 0.22)";
 const MIN_LENGTH_MS = 10;
 
 interface TrimResult {
@@ -50,9 +50,9 @@ export default function TrimPage() {
     const ws = WaveSurfer.create({
       container: containerRef.current,
       media: audioRef.current,
-      waveColor: "#a1a1aa",
-      progressColor: "#ef4444",
-      cursorColor: "#ef4444",
+      waveColor: "#334155",
+      progressColor: "#38bdf8",
+      cursorColor: "#d4a359",
       height: 96,
       plugins: [regions, hover],
     });
@@ -158,10 +158,14 @@ export default function TrimPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Trimmer</CardTitle>
+        <CardTitle className="font-heading">Trimmer</CardTitle>
+        <CardDescription>
+          Drag the gold handles below to pick where your clip starts and ends, or type exact
+          millisecond values. Press play any time to preview.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div ref={containerRef} className="rounded-md border bg-muted/30 p-2" />
+        <div ref={containerRef} className="rounded-md border border-border/60 bg-card p-2" />
         {!isReady && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2Icon className="size-4 animate-spin" />
@@ -179,8 +183,8 @@ export default function TrimPage() {
           >
             {isPlaying ? <PauseIcon className="size-4" /> : <PlayIcon className="size-4" />}
           </Button>
-          <span className="text-sm text-muted-foreground">
-            Selection: {formatMsTime(startMs / 1000)} – {formatMsTime(endMs / 1000)}
+          <span className="font-mono text-sm tabular-nums text-muted-foreground">
+            {formatMsTime(startMs / 1000)} – {formatMsTime(endMs / 1000)}
           </span>
         </div>
 

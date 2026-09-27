@@ -42,11 +42,14 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>MD Tools</CardTitle>
-          <CardDescription>
-            {sent
-              ? "Check your email for a sign-in link."
-              : "Sign in with your team email to continue."}
-          </CardDescription>
+          {sent ? (
+            <CardDescription className="flex items-center gap-2 pt-1">
+              <Image src="/happy-logo.png" alt="" width={28} height={28} className="rounded-full" />
+              Check your email for a sign-in link.
+            </CardDescription>
+          ) : (
+            <CardDescription>Sign in with your team email to continue.</CardDescription>
+          )}
         </CardHeader>
         <CardContent>
           {!sent && (

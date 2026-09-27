@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { checkJobCapacity, createJob } from "@/lib/jobs";
+import { checkJobCapacity, createJob, markJobError } from "@/lib/jobs";
 import { callProcessor } from "@/lib/processor";
 
 export async function POST(request: Request) {
@@ -28,7 +28,12 @@ export async function POST(request: Request) {
     { storage_path, start_ms, end_ms },
     track_id
   );
-  await callProcessor("/jobs/trim", { job_id: job.id, storage_path, start_ms, end_ms });
+  try {
+    await callProcessor("/jobs/trim", { job_id: job.id, storage_path, start_ms, end_ms });
+  } catch (err) {
+    await markJobError(auth.supabase, job.id, err instanceof Error ? err.message : "Failed to reach the processor");
+    return NextResponse.json({ error: "Could not reach the processor — try again shortly." }, { status: 502 });
+  }
 
   return NextResponse.json({ job });
 }

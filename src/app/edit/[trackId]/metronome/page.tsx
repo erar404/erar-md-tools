@@ -7,7 +7,7 @@ import { useTrackAudio } from "@/components/edit/track-audio-provider";
 import { JobStatusButton } from "@/components/edit/job-status-button";
 import { createClient } from "@/lib/supabase/client";
 import { createSignedDownloadUrl } from "@/lib/storage-client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -215,10 +215,14 @@ export default function MetronomePage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Metronome Generator</CardTitle>
+        <CardTitle className="font-heading">Metronome Generator</CardTitle>
+        <CardDescription>
+          Start from the tempo we detected, or tap along with the song to set your own. Then
+          generate a click track to download.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 rounded-md border border-border/60 bg-card px-4 py-3">
           <Button
             type="button"
             variant="outline"
@@ -229,7 +233,9 @@ export default function MetronomePage() {
             {isPreviewPlaying ? <PauseIcon className="size-4" /> : <PlayIcon className="size-4" />}
           </Button>
           <div>
-            <div className="text-2xl font-semibold tabular-nums">{effectiveBpm} BPM</div>
+            <div className="font-mono text-3xl font-semibold tabular-nums text-primary">
+              {effectiveBpm} <span className="text-base text-muted-foreground">BPM</span>
+            </div>
             <div className="text-xs text-muted-foreground">
               {tapBpm != null ? "From tap tempo" : "From analyzer"}
               {multiplier !== 1 ? ` · ${multiplier}×` : ""}

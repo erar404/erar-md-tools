@@ -48,3 +48,12 @@ export async function createJob(
   if (error) throw error;
   return data as Job;
 }
+
+/** Only the processor (service-role) normally transitions a job past "pending".
+ * If the request to reach it never lands — network error, misconfigured
+ * PROCESSOR_BASE_URL, etc. — the job would otherwise sit at "pending" forever,
+ * permanently consuming one of the caller's `checkJobCapacity` slots. Call this
+ * from the route's catch block so a dispatch failure surfaces as a real error. */
+export async function markJobError(supabase: SupabaseClient, jobId: string, message: string) {
+  await supabase.from("jobs").update({ status: "error", error_message: message }).eq("id", jobId);
+}

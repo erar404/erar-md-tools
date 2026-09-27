@@ -8,7 +8,8 @@ import { useTrackAudio } from "@/components/edit/track-audio-provider";
 import { JobStatusButton } from "@/components/edit/job-status-button";
 import { createClient } from "@/lib/supabase/client";
 import { createSignedDownloadUrl } from "@/lib/storage-client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -345,7 +346,12 @@ export default function SplitPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Track Splitter</CardTitle>
+        <CardTitle className="font-heading">Track Splitter</CardTitle>
+        <CardDescription>
+          Separate the song into individual instrument tracks. Once split, use Mute and Solo to
+          isolate a part, adjust each volume slider, then download a single stem or mix them down
+          together.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {!stems && (
@@ -471,8 +477,8 @@ function StemTrack({
       container: containerRef.current,
       url,
       height: 56,
-      waveColor: "#a1a1aa",
-      progressColor: "#ef4444",
+      waveColor: "#334155",
+      progressColor: "#38bdf8",
       interact: false,
       hideScrollbar: true,
     });
@@ -492,16 +498,18 @@ function StemTrack({
           <Button
             type="button"
             size="sm"
-            variant={muted ? "secondary" : "outline"}
+            variant="outline"
             onClick={onToggleMute}
+            className={cn(muted && "border-amber-500/60 bg-amber-500/15 text-amber-400")}
           >
             Mute
           </Button>
           <Button
             type="button"
             size="sm"
-            variant={soloed ? "default" : "outline"}
+            variant="outline"
             onClick={onToggleSolo}
+            className={cn(soloed && "border-signal-teal/60 bg-signal-teal/15 text-signal-teal")}
           >
             Solo
           </Button>
