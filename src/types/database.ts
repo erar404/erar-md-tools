@@ -12,9 +12,19 @@ export type SourceType = "youtube" | "upload";
 
 export type StemName = "vocals" | "drums" | "bass" | "other" | "piano";
 
+export interface Affiliation {
+  id: string;
+  name: string;
+  is_allowed: boolean;
+  created_at: string;
+}
+
 export interface Profile {
   id: string;
   display_name: string | null;
+  avatar_url: string | null;
+  role: string | null;
+  affiliation_id: string | null;
   created_at: string;
 }
 

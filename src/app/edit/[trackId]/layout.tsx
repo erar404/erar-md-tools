@@ -4,7 +4,8 @@ import { AnalyzerHeader } from "@/components/edit/analyzer-header";
 import { TrackAudioProvider } from "@/components/edit/track-audio-provider";
 import { EditTabs } from "@/components/edit/edit-tabs";
 import { Logo } from "@/components/branding/logo";
-import type { Track } from "@/types/database";
+import { UserMenu } from "@/components/nav/user-menu";
+import type { Profile, Track } from "@/types/database";
 
 export default async function EditLayout({
   children,
@@ -15,14 +16,23 @@ export default async function EditLayout({
 }) {
   const { trackId } = await params;
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("tracks")
-    .select("*")
-    .eq("id", trackId)
-    .single();
+  const [{ data }, { data: userData }] = await Promise.all([
+    supabase.from("tracks").select("*").eq("id", trackId).single(),
+    supabase.auth.getUser(),
+  ]);
 
   if (!data) notFound();
   const track = data as Track;
+
+  let userProfile: Profile | null = null;
+  if (userData.user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userData.user.id)
+      .single();
+    userProfile = profile as Profile | null;
+  }
 
   return (
     <TrackAudioProvider track={track}>
@@ -36,7 +46,16 @@ export default async function EditLayout({
                 {track.title}
               </h1>
             </div>
-            <AnalyzerHeader initialTrack={track} />
+            <div className="flex items-center gap-3">
+              <AnalyzerHeader initialTrack={track} />
+              {userData.user && (
+                <UserMenu
+                  email={userData.user.email ?? ""}
+                  displayName={userProfile?.display_name ?? null}
+                  avatarUrl={userProfile?.avatar_url}
+                />
+              )}
+            </div>
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <EditTabs trackId={trackId} />
