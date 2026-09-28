@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Job } from "@/types/database";
 import { explainJobError } from "@/lib/job-error";
+import { withViewTransition } from "@/lib/view-transition";
 
 /** Subscribes to Realtime updates for a job and keeps `job` in sync, the
  * pattern used by every tab and the landing flow. Also closes a real race:
@@ -39,7 +40,10 @@ export function useJobStatus(
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "jobs", filter: `id=eq.${job.id}` },
-        (payload) => setJob(payload.new as Job)
+        // The status swap (spinner -> done/error) morphs via View Transitions
+        // wherever the caller names a `job-panel`-style region; elsewhere it's
+        // still a soft whole-page cross-fade rather than a hard cut.
+        (payload) => withViewTransition(() => setJob(payload.new as Job))
       )
       .subscribe((status) => {
         if (status !== "SUBSCRIBED" || cancelled) return;
@@ -52,7 +56,7 @@ export function useJobStatus(
           .eq("id", job.id)
           .single()
           .then(({ data }) => {
-            if (data && !cancelled) setJob(data as Job);
+            if (data && !cancelled) withViewTransition(() => setJob(data as Job));
           });
       });
 

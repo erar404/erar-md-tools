@@ -43,18 +43,21 @@ export type Database = {
       }
       affiliations: {
         Row: {
+          avatar_url: string | null
           created_at: string
           id: string
           is_allowed: boolean
           name: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           id?: string
           is_allowed?: boolean
           name: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           id?: string
           is_allowed?: boolean
@@ -117,7 +120,10 @@ export type Database = {
           display_name: string | null
           id: string
           is_admin: boolean
+          must_change_password: boolean
           role: string | null
+          user_type_id: string | null
+          username: string | null
         }
         Insert: {
           affiliation_id?: string | null
@@ -126,7 +132,10 @@ export type Database = {
           display_name?: string | null
           id: string
           is_admin?: boolean
+          must_change_password?: boolean
           role?: string | null
+          user_type_id?: string | null
+          username?: string | null
         }
         Update: {
           affiliation_id?: string | null
@@ -135,7 +144,10 @@ export type Database = {
           display_name?: string | null
           id?: string
           is_admin?: boolean
+          must_change_password?: boolean
           role?: string | null
+          user_type_id?: string | null
+          username?: string | null
         }
         Relationships: [
           {
@@ -143,6 +155,13 @@ export type Database = {
             columns: ["affiliation_id"]
             isOneToOne: false
             referencedRelation: "affiliations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_user_type_id_fkey"
+            columns: ["user_type_id"]
+            isOneToOne: false
+            referencedRelation: "user_types"
             referencedColumns: ["id"]
           },
         ]
@@ -231,6 +250,27 @@ export type Database = {
           storage_path?: string
           title?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_types: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
         }
         Relationships: []
       }

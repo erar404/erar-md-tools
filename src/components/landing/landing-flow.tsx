@@ -265,7 +265,7 @@ export function LandingFlow() {
 
   if (job) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 [view-transition-name:job-panel]">
         {job.status !== "done" && job.status !== "error" && (
           <div className="flex flex-col items-center gap-2 py-2 text-sm text-muted-foreground">
             <Image

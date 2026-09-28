@@ -14,6 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { Affiliation, Profile } from "@/types/database";
 
 type AdminUser = Profile & { email: string };
@@ -25,6 +34,9 @@ export function AdminUsersPanel() {
   const [draft, setDraft] = useState<Partial<AdminUser>>({});
   const [newEmail, setNewEmail] = useState("");
   const [busy, setBusy] = useState(false);
+  const [tempPassword, setTempPassword] = useState<{ email: string; password: string } | null>(
+    null
+  );
 
   async function load() {
     const [usersRes, affiliationsRes] = await Promise.all([
@@ -110,8 +122,23 @@ export function AdminUsersPanel() {
     }
   }
 
-  function affiliationName(id: string | null) {
-    return affiliations.find((a) => a.id === id)?.name ?? "—";
+  function affiliationOf(id: string | null) {
+    return affiliations.find((a) => a.id === id);
+  }
+
+  async function handleSetPassword(user: AdminUser) {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/password`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not set a password");
+      setTempPassword({ email: user.email, password: data.password });
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not set a password");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -168,7 +195,11 @@ export function AdminUsersPanel() {
                         }
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="None" />
+                          <SelectValue placeholder="None">
+                            {(value: string | null) =>
+                              affiliations.find((a) => a.id === value)?.name ?? "None"
+                            }
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {affiliations.map((a) => (
@@ -198,23 +229,57 @@ export function AdminUsersPanel() {
                   </div>
                 ) : (
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">
-                        {user.display_name || user.email}
-                        {user.is_admin && (
-                          <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                            ADMIN
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Avatar className="size-8 shrink-0">
+                        <AvatarImage src={user.avatar_url ?? undefined} alt="" />
+                        <AvatarFallback className="bg-primary/15 text-xs text-primary">
+                          {(user.display_name || user.email).slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">
+                          {user.display_name || user.email}
+                          {user.is_admin && (
+                            <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                              ADMIN
+                            </span>
+                          )}
+                        </p>
+                        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <span className="truncate">
+                            {user.email} · {user.role || "no role set"}
                           </span>
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {user.email} · {user.role || "no role set"} ·{" "}
-                        {affiliationName(user.affiliation_id)}
-                      </p>
+                          {(() => {
+                            const affiliation = affiliationOf(user.affiliation_id);
+                            return (
+                              <span className="flex shrink-0 items-center gap-1">
+                                <span>·</span>
+                                {affiliation?.avatar_url && (
+                                  <Avatar className="size-4">
+                                    <AvatarImage src={affiliation.avatar_url} alt="" />
+                                    <AvatarFallback className="text-[8px]">
+                                      {affiliation.name.slice(0, 1)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                )}
+                                <span>{affiliation?.name ?? "—"}</span>
+                              </span>
+                            );
+                          })()}
+                        </p>
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" onClick={() => startEdit(user)}>
                         Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => handleSetPassword(user)}
+                      >
+                        Set password
                       </Button>
                       <Button
                         size="sm"
@@ -233,6 +298,38 @@ export function AdminUsersPanel() {
           </ul>
         )}
       </CardContent>
+
+      <Dialog
+        open={tempPassword !== null}
+        onOpenChange={(open) => {
+          if (!open) setTempPassword(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Temporary password</DialogTitle>
+            <DialogDescription>
+              For {tempPassword?.email}. Shown once, share it out of band. They&rsquo;ll be
+              required to set their own password on next sign-in.
+            </DialogDescription>
+          </DialogHeader>
+          <p className="rounded-md border border-border/60 bg-muted px-3 py-2 font-mono text-sm tracking-wide text-foreground">
+            {tempPassword?.password}
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (tempPassword) navigator.clipboard.writeText(tempPassword.password);
+                toast.success("Copied to clipboard.");
+              }}
+            >
+              Copy
+            </Button>
+            <Button onClick={() => setTempPassword(null)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

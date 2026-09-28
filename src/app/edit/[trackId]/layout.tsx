@@ -66,7 +66,9 @@ export default async function EditLayout({
             </p>
           </div>
         </header>
-        <main className="flex-1 bg-background p-6">{children}</main>
+        <main className="flex-1 bg-background p-6 [view-transition-name:edit-main]">
+          {children}
+        </main>
       </div>
     </TrackAudioProvider>
   );

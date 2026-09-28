@@ -47,5 +47,23 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // An admin-issued password must be replaced before anything else happens.
+  // The profile page is where that reset form lives, so it's the one place
+  // this redirect doesn't apply.
+  if (user && !isPublicPath && !request.nextUrl.pathname.startsWith("/profile")) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("must_change_password")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.must_change_password) {
+      const profileUrl = request.nextUrl.clone();
+      profileUrl.pathname = "/profile";
+      profileUrl.searchParams.set("must_change_password", "1");
+      return NextResponse.redirect(profileUrl);
+    }
+  }
+
   return response;
 }

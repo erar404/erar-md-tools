@@ -15,7 +15,15 @@ export type StemName = "vocals" | "drums" | "bass" | "other" | "piano";
 export interface Affiliation {
   id: string;
   name: string;
+  avatar_url: string | null;
   is_allowed: boolean;
+  created_at: string;
+}
+
+export interface UserType {
+  id: string;
+  name: string;
+  description: string | null;
   created_at: string;
 }
 
@@ -25,7 +33,10 @@ export interface Profile {
   avatar_url: string | null;
   role: string | null;
   affiliation_id: string | null;
+  user_type_id: string | null;
   is_admin: boolean;
+  username: string | null;
+  must_change_password: boolean;
   created_at: string;
 }
 

@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-28T00:00:00.000Z",
+  "title": "Design System: MD Tools",
+  "extensions": {
+    "colorMeta": {
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Canvas",
+        "canonical": "oklch(18% 0.02 260)",
+        "tonalRamp": ["#05070c", "#080b13", "#0c121e", "#131b2e", "#1a243b", "#232f4c", "#3a4a68", "#8b96ab"]
+      },
+      "orchestral-brass": {
+        "role": "primary",
+        "displayName": "Orchestral Brass",
+        "canonical": "oklch(76% 0.13 75)",
+        "tonalRamp": ["#3d2900", "#583a00", "#7a5000", "#946c2d", "#b1873f", "#d4a359", "#e5b869", "#ffddb1"]
+      },
+      "phosphor-emerald": {
+        "role": "secondary",
+        "displayName": "Phosphor Emerald",
+        "canonical": "oklch(78% 0.14 175)",
+        "tonalRamp": ["#00201c", "#00352f", "#004d44", "#03c6b2", "#2dd4bf", "#5fe3d2", "#8fefe2", "#c4f7ef"]
+      },
+      "studio-cyan": {
+        "role": "tertiary",
+        "displayName": "Studio Cyan",
+        "canonical": "oklch(75% 0.13 235)",
+        "tonalRamp": ["#001e2c", "#00354a", "#004c69", "#0d7fa8", "#2eb7f2", "#38bdf8", "#7bd0ff", "#c4e7ff"]
+      },
+      "ruby-alert": {
+        "role": "error",
+        "displayName": "Ruby Alert",
+        "canonical": "oklch(65% 0.2 15)",
+        "tonalRamp": ["#3a000a", "#69000a", "#93000a", "#c62838", "#f43f5e", "#ff7a8c", "#ffb4ab", "#ffdad6"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page-level titles: track title, top card titles." },
+      "headline": { "displayName": "Headline", "purpose": "Card and section titles." },
+      "body": { "displayName": "Body", "purpose": "Instructional and conversational copy, tip-jar messages." },
+      "label": { "displayName": "Label", "purpose": "Uppercase micro-labels: telemetry labels, field captions." },
+      "telemetry": { "displayName": "Telemetry", "purpose": "Any live-updating number: BPM, timecodes, durations." }
+    },
+    "shadows": [
+      {
+        "name": "signal-glow-brass",
+        "value": "0 0 0 3px rgba(212,163,89,0.35)",
+        "purpose": "Active/focused transport control or primary CTA — the one deliberate saturated glow, never a neutral drop shadow."
+      },
+      {
+        "name": "signal-glow-cyan",
+        "value": "0 0 0 3px rgba(56,189,248,0.35)",
+        "purpose": "Active playhead or in-motion indicator glow."
+      }
+    ],
+    "motion": [
+      { "name": "ease-out-console", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Default easing for all state transitions (hover, open/close, tab switch) — ease-out-expo, no bounce." },
+      { "name": "duration-fast", "value": "100ms", "purpose": "Micro state changes: hover, focus ring." },
+      { "name": "duration-standard", "value": "150ms", "purpose": "Dialog/menu open-close, tab content swap." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main call-to-action: Process, Download, Generate click track, Split.",
+      "html": "<button class=\"ds-btn-primary\">Generate click track</button>",
+      "css": ".ds-btn-primary { background: #d4a359; color: #241a04; padding: 8px 16px; border-radius: 4px; font-weight: 500; border: none; transition: background 100ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-primary:hover { background: #e5b869; } .ds-btn-primary:focus-visible { outline: 2px solid #d4a359; outline-offset: 2px; } .ds-btn-primary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action alongside a primary brass button (e.g. \"Just download the file\").",
+      "html": "<button class=\"ds-btn-outline\">Just download the file</button>",
+      "css": ".ds-btn-outline { background: transparent; color: #f8fafc; padding: 8px 16px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); transition: background 100ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-outline:hover { background: #1a243b; } .ds-btn-outline:focus-visible { outline: 2px solid #d4a359; outline-offset: 2px; }"
+    },
+    {
+      "name": "Telemetry Readout",
+      "kind": "custom",
+      "refersTo": "telemetry-readout",
+      "description": "The Key/Tempo/Time badges in the edit header — colored status dot plus a monospace tabular-nums value.",
+      "html": "<div class=\"ds-telemetry\"><span class=\"ds-telemetry-dot\"></span><span class=\"ds-telemetry-label\">TEMPO</span><span class=\"ds-telemetry-value\">136.0 BPM</span></div>",
+      "css": ".ds-telemetry { display: inline-flex; align-items: center; gap: 8px; background: #131b2e; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 6px 12px; } .ds-telemetry-dot { width: 6px; height: 6px; border-radius: 9999px; background: #d4a359; } .ds-telemetry-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: #94a3b8; text-transform: uppercase; } .ds-telemetry-value { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 500; color: #f8fafc; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Segmented Tab (pill)",
+      "kind": "nav",
+      "refersTo": "tab-pill",
+      "description": "Trim / Metronome / Split mode switcher in the edit header — the one place full-pill radius is correct.",
+      "html": "<a class=\"ds-tab ds-tab-active\">Trim</a><a class=\"ds-tab\">Metronome</a>",
+      "css": ".ds-tab { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 9999px; border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 14px; margin-right: 8px; transition: background 100ms cubic-bezier(0.16,1,0.3,1), color 100ms; } .ds-tab-active { background: rgba(212,163,89,0.15); color: #d4a359; border-color: rgba(212,163,89,0.4); } .ds-tab:hover:not(.ds-tab-active) { color: #f8fafc; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Standard content container: one tonal step off canvas, no shadow, hairline border.",
+      "html": "<div class=\"ds-card\"><h3 class=\"ds-card-title\">Trimmer</h3><p class=\"ds-card-body\">Drag the gold handles below to pick where your clip starts and ends.</p></div>",
+      "css": ".ds-card { background: #131b2e; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px; color: #f8fafc; } .ds-card-title { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600; margin: 0 0 4px; } .ds-card-body { font-family: 'Manrope', sans-serif; font-size: 14px; color: #94a3b8; margin: 0; }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Text/number inputs: ms-precision trim fields, search box, form fields.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Search by title, artist…\" />",
+      "css": ".ds-input { background: #0e1524; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 8px 12px; color: #f8fafc; font-family: 'Manrope', sans-serif; font-size: 14px; } .ds-input:focus-visible { outline: none; border-color: #d4a359; }"
+    },
+    {
+      "name": "Mascot Toast",
+      "kind": "custom",
+      "refersTo": "mascot-toast",
+      "description": "Success/error toast pairing the happy or sad mascot avatar with the message — the signature delight pattern.",
+      "html": "<div class=\"ds-toast\"><img class=\"ds-toast-avatar\" src=\"/happy-logo.png\" alt=\"\" /><span class=\"ds-toast-text\">Profile saved.</span></div>",
+      "css": ".ds-toast { display: flex; align-items: center; gap: 8px; background: #232f4c; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px 16px; color: #f8fafc; font-family: 'Manrope', sans-serif; font-size: 14px; } .ds-toast-avatar { width: 20px; height: 20px; border-radius: 9999px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Backstage Console",
+    "overview": "MD Tools is a real mixing console at soundcheck: brass-and-gold transport controls, cyan waveform telemetry, and a crew that still cracks jokes between cues. It is not a generic SaaS admin panel and it is not a cold, silent instrument — it's a precision tool with a personality. Density stays console-tight where it matters and opens up to plain-language breathing room everywhere a first-time user needs orientation. Personality lives at the edges, never inside the controls themselves.",
+    "keyCharacteristics": [
+      "Dark obsidian canvas, permanently — this is a console, consoles don't have a light mode.",
+      "Brass/gold is the one warm accent; teal and cyan are cold signal colors, never decorative.",
+      "Every numeric readout is monospace with tabular figures — it must never jitter.",
+      "Delight (mascot, tip jar, playful copy) is confined to secondary moments, never inside primary controls."
+    ],
+    "rules": [
+      { "name": "The Signal, Not Decoration Rule", "body": "Teal and cyan never appear as generic accent color on a button, badge, or link \"just because it looks nice.\" Teal means safe/engaged. Cyan means active/in-motion.", "section": "colors" },
+      { "name": "The No-Jitter Rule", "body": "Any number that can change while the user is looking at it is set in JetBrains Mono with tabular-nums.", "section": "typography" },
+      { "name": "The Tonal-Tier-Not-Shadow Rule", "body": "Depth comes from moving up the canvas → rack → strip → dock ladder plus a hairline ring, never a box-shadow.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep the canvas permanently dark (#0c121e base).",
+      "Do use Orchestral Brass as the only warm accent, reserved for primary actions and active/focused state.",
+      "Do use Phosphor Emerald only for safe/engaged signals and Studio Cyan only for active/in-motion signals.",
+      "Do set every live numeric readout in JetBrains Mono with tabular-nums.",
+      "Do pair every success/error state with the happy or sad mascot.",
+      "Do use 4px hardware-radius corners on buttons/inputs and 8px on cards/panels; reserve full-pill radius for genuine mode-switch controls."
+    ],
+    "donts": [
+      "Don't build a generic SaaS card-grid dashboard.",
+      "Don't add box-shadow for elevation.",
+      "Don't use a side-stripe border accent on any card, list item, or alert.",
+      "Don't use gradient text, glassmorphism as a default, or a bouncy/elastic easing curve.",
+      "Don't let delight leak into the actual editing controls."
+    ]
+  }
+}

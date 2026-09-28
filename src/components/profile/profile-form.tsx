@@ -15,59 +15,149 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import type { Affiliation, Profile } from "@/types/database";
+import { withViewTransition } from "@/lib/view-transition";
+import type { Affiliation, Profile, UserType } from "@/types/database";
 
 export function ProfileForm({
   email,
   profile,
   affiliations,
+  userTypes,
 }: {
   email: string;
   profile: Profile;
   affiliations: Affiliation[];
+  userTypes: UserType[];
 }) {
   const [displayName, setDisplayName] = useState(profile.display_name ?? "");
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url ?? "");
-  const [role, setRole] = useState(profile.role ?? "");
+  const [userTypeId, setUserTypeId] = useState(profile.user_type_id ?? "");
   const [affiliationId, setAffiliationId] = useState(profile.affiliation_id ?? "");
+  const [username, setUsername] = useState(profile.username ?? "");
   const [saving, setSaving] = useState(false);
+
+  const [mustChangePassword, setMustChangePassword] = useState(profile.must_change_password);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  const selectedType = userTypes.find((t) => t.id === userTypeId);
+  const selectedAffiliation = affiliations.find((a) => a.id === affiliationId);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
+    // Optimistic: the fields are already showing what the user picked, so the
+    // save just needs to confirm instantly rather than make them wait on a
+    // round-trip. Only a real failure rolls the fields back.
+    const previous = {
+      displayName: profile.display_name ?? "",
+      avatarUrl: profile.avatar_url ?? "",
+      userTypeId: profile.user_type_id ?? "",
+      affiliationId: profile.affiliation_id ?? "",
+      username: profile.username ?? "",
+    };
+    const toastId = toast.success("Profile saved.");
+    withViewTransition(() => setSaving(true));
+
     try {
       const supabase = createClient();
       const { error } = await supabase.from("profiles").upsert({
         id: profile.id,
         display_name: displayName.trim() || null,
         avatar_url: avatarUrl.trim() || null,
-        role: role.trim() || null,
+        user_type_id: userTypeId || null,
         affiliation_id: affiliationId || null,
+        username: username.trim().toLowerCase() || null,
       });
       if (error) throw error;
-      toast.success("Profile saved.");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save your profile");
+      toast.dismiss(toastId);
+      withViewTransition(() => {
+        setDisplayName(previous.displayName);
+        setAvatarUrl(previous.avatarUrl);
+        setUserTypeId(previous.userTypeId);
+        setAffiliationId(previous.affiliationId);
+        setUsername(previous.username);
+      });
+      toast.error(
+        err instanceof Error
+          ? err.message.includes("profiles_username_lower_idx")
+            ? "That username is taken. Try another."
+            : err.message
+          : "Could not save, your changes were reverted."
+      );
     } finally {
       setSaving(false);
     }
   }
 
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords don't match.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error("Use at least 8 characters.");
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      const supabase = createClient();
+      const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
+      if (authError) throw authError;
+
+      if (mustChangePassword) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({ must_change_password: false })
+          .eq("id", profile.id);
+        if (profileError) throw profileError;
+        withViewTransition(() => setMustChangePassword(false));
+      }
+
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Password updated.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not update password");
+    } finally {
+      setChangingPassword(false);
+    }
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-heading">Your profile</CardTitle>
-        <CardDescription>Update how your details appear across MD Tools.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSave} className="space-y-4">
+    <div className="space-y-4">
+      {mustChangePassword && (
+        <div className="rounded-md border border-primary/40 bg-primary/10 px-4 py-3 text-sm text-foreground">
+          An admin reset your password. Set a new one below before you continue.
+        </div>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading">Your profile</CardTitle>
+          <CardDescription>Update how your details appear across MD Tools.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSave} className="space-y-4">
           <div className="flex items-center gap-3">
-            <Avatar className="size-14">
-              <AvatarImage src={avatarUrl || undefined} alt="" />
-              <AvatarFallback className="bg-primary/15 text-primary">
-                {(displayName || email).slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="size-14">
+                <AvatarImage src={avatarUrl || undefined} alt="" />
+                <AvatarFallback className="bg-primary/15 text-primary">
+                  {(displayName || email).slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {selectedAffiliation?.avatar_url && (
+                <Avatar className="absolute -bottom-1 -right-1 size-6 border-2 border-card">
+                  <AvatarImage src={selectedAffiliation.avatar_url} alt="" />
+                  <AvatarFallback className="text-[9px]">
+                    {selectedAffiliation.name.slice(0, 1)}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+            </div>
             <div className="flex-1 space-y-2">
               <Label htmlFor="avatar-url">Avatar URL</Label>
               <Input
@@ -96,21 +186,52 @@ export function ProfileForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="role">Role</Label>
+            <Label htmlFor="username">Username</Label>
             <Input
-              id="role"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              placeholder="e.g. Music Director, Vocalist, Drummer"
-              maxLength={80}
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="For signing in with a password instead of an email link"
+              maxLength={40}
+              autoCapitalize="off"
+              autoCorrect="off"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="user-type">Which of these describes you best?</Label>
+            <Select value={userTypeId} onValueChange={(value) => setUserTypeId(value ?? "")}>
+              <SelectTrigger id="user-type" className="w-full">
+                {/* base-ui's SelectValue renders the raw value (the id)
+                    unless given a children function to resolve the label. */}
+                <SelectValue placeholder="Select a type">
+                  {(value: string | null) =>
+                    userTypes.find((t) => t.id === value)?.name ?? "Select a type"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {userTypes.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedType?.description && (
+              <p className="text-xs text-muted-foreground">{selectedType.description}</p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="affiliation">Affiliation</Label>
             <Select value={affiliationId} onValueChange={(value) => setAffiliationId(value ?? "")}>
               <SelectTrigger id="affiliation" className="w-full">
-                <SelectValue placeholder="Select your affiliation" />
+                <SelectValue placeholder="Select your affiliation">
+                  {(value: string | null) =>
+                    affiliations.find((a) => a.id === value)?.name ?? "Select your affiliation"
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {affiliations.map((a) => (
@@ -125,8 +246,54 @@ export function ProfileForm({
           <Button type="submit" disabled={saving} className="w-full">
             {saving ? "Saving…" : "Save changes"}
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-heading">Password</CardTitle>
+          <CardDescription>
+            {profile.username
+              ? "Sign in with your username and a password instead of waiting on an email link."
+              : "Save a username above first, then add a password here."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="At least 8 characters"
+                autoComplete="new-password"
+                minLength={8}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+                minLength={8}
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={changingPassword || !profile.username || !newPassword}
+              className="w-full"
+            >
+              {changingPassword ? "Updating…" : "Update password"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

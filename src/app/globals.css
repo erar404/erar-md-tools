@@ -109,3 +109,43 @@
     @apply font-sans;
   }
 }
+
+/* Overdrive: View Transitions for edit-tab route swaps and job-status morphs.
+   ease-out-console matches DESIGN.md's named motion token. */
+::view-transition-old(edit-main),
+::view-transition-new(edit-main) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+::view-transition-old(edit-main) {
+  animation-name: md-tools-panel-out;
+}
+::view-transition-new(edit-main) {
+  animation-name: md-tools-panel-in;
+}
+@keyframes md-tools-panel-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes md-tools-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+::view-transition-old(job-panel),
+::view-transition-new(job-panel) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

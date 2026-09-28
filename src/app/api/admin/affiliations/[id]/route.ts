@@ -6,11 +6,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!auth) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
-  const { name, is_allowed } = await request.json();
+  const { name, is_allowed, avatar_url } = await request.json();
 
-  const update: { name?: string; is_allowed?: boolean } = {};
+  const update: { name?: string; is_allowed?: boolean; avatar_url?: string | null } = {};
   if (name !== undefined) update.name = name;
   if (is_allowed !== undefined) update.is_allowed = is_allowed;
+  if (avatar_url !== undefined) update.avatar_url = avatar_url?.trim() || null;
 
   const { error } = await auth.admin.from("affiliations").update(update).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

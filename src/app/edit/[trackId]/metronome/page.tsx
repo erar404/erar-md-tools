@@ -8,6 +8,7 @@ import { JobStatusButton } from "@/components/edit/job-status-button";
 import { createClient } from "@/lib/supabase/client";
 import { createSignedDownloadUrl } from "@/lib/storage-client";
 import { useJobStatus } from "@/lib/use-job-status";
+import { useSpringNumber } from "@/lib/use-spring-number";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -57,6 +58,9 @@ export default function MetronomePage() {
   const baseBpm = tapBpm ?? track.analyzed_tempo ?? DEFAULT_BPM;
   const effectiveBpm = Math.round(baseBpm * multiplier * 10) / 10;
   const beatsPerBar = parseInt(timeSignature.split("/")[0], 10);
+  // Display-only tick animation — the click scheduler below always reads the
+  // real (non-animated) effectiveBpm via bpmRef, so audio timing is unaffected.
+  const displayedBpm = useSpringNumber(effectiveBpm, 1);
 
   // Preview scheduler reads these refs so it doesn't need to be torn down
   // and restarted every time a control changes mid-playback.
@@ -273,7 +277,7 @@ export default function MetronomePage() {
           </Button>
           <div>
             <div className="font-mono text-3xl font-semibold tabular-nums text-primary">
-              {effectiveBpm} <span className="text-base text-muted-foreground">BPM</span>
+              {displayedBpm} <span className="text-base text-muted-foreground">BPM</span>
             </div>
             <div className="text-xs text-muted-foreground">
               {tapBpm != null ? "From tap tempo" : "From analyzer"}

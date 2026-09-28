@@ -14,14 +14,18 @@ export async function POST(request: Request) {
   const auth = await requireAdmin();
   if (!auth) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { name, is_allowed } = await request.json();
+  const { name, is_allowed, avatar_url } = await request.json();
   if (!name || typeof name !== "string") {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
   }
 
   const { data, error } = await auth.admin
     .from("affiliations")
-    .insert({ name: name.trim(), is_allowed: is_allowed ?? true })
+    .insert({
+      name: name.trim(),
+      is_allowed: is_allowed ?? true,
+      avatar_url: avatar_url?.trim() || null,
+    })
     .select()
     .single();
 

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ScissorsIcon, TimerIcon, Volume2Icon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { withViewTransitionNav } from "@/lib/view-transition";
 
 const TABS = [
   { href: "trim", label: "Trim", hint: "Cut a clip", icon: ScissorsIcon },
@@ -13,6 +14,7 @@ const TABS = [
 
 export function EditTabs({ trackId }: { trackId: string }) {
   const pathname = usePathname();
+  const router = useRouter();
 
   return (
     <nav className="flex flex-wrap gap-2">
@@ -24,6 +26,13 @@ export function EditTabs({ trackId }: { trackId: string }) {
           <Link
             key={tab.href}
             href={href}
+            onClick={(e) => {
+              // Let modified clicks (open in new tab, etc.) behave normally;
+              // only the plain-click path gets the animated panel swap.
+              if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+              e.preventDefault();
+              withViewTransitionNav(() => router.push(href));
+            }}
             className={cn(
               "flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition-colors",
               active

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LandingFlow } from "@/components/landing/landing-flow";
 import { SiteHeader } from "@/components/nav/site-header";
@@ -28,10 +27,9 @@ export default async function LandingPage() {
         />
       )}
       <main className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
-        <Image src="/brand-background.png" alt="" width={140} height={140} priority />
         <Card className="w-full max-w-xl">
           <CardHeader>
-            <CardTitle className="font-heading">MD Tools</CardTitle>
+            <CardTitle className="font-heading">Get started</CardTitle>
             <CardDescription>
               Paste a YouTube link or drop an audio file below, then press Process.
             </CardDescription>

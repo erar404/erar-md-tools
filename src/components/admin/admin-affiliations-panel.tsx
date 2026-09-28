@@ -6,11 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { withViewTransition } from "@/lib/view-transition";
 import type { Affiliation } from "@/types/database";
 
 export function AdminAffiliationsPanel() {
   const [affiliations, setAffiliations] = useState<Affiliation[] | null>(null);
   const [newName, setNewName] = useState("");
+  const [newAvatarUrl, setNewAvatarUrl] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function load() {
@@ -32,11 +35,12 @@ export function AdminAffiliationsPanel() {
       const res = await fetch("/api/admin/affiliations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName }),
+        body: JSON.stringify({ name: newName, avatar_url: newAvatarUrl || null }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not add affiliation");
       setNewName("");
+      setNewAvatarUrl("");
       toast.success("Affiliation added.");
       await load();
     } catch (err) {
@@ -47,7 +51,12 @@ export function AdminAffiliationsPanel() {
   }
 
   async function handleToggle(a: Affiliation) {
-    setBusy(true);
+    // Optimistic: flip it in place immediately; roll back only on a real failure.
+    withViewTransition(() =>
+      setAffiliations(
+        (prev) => prev?.map((x) => (x.id === a.id ? { ...x, is_allowed: !a.is_allowed } : x)) ?? null
+      )
+    );
     try {
       const res = await fetch(`/api/admin/affiliations/${a.id}`, {
         method: "PATCH",
@@ -55,11 +64,27 @@ export function AdminAffiliationsPanel() {
         body: JSON.stringify({ is_allowed: !a.is_allowed }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Update failed");
-      await load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Update failed");
-    } finally {
-      setBusy(false);
+      withViewTransition(() =>
+        setAffiliations((prev) => prev?.map((x) => (x.id === a.id ? a : x)) ?? null)
+      );
+      toast.error(err instanceof Error ? err.message : "Update failed — reverted.");
+    }
+  }
+
+  async function handleAvatarChange(a: Affiliation, avatarUrl: string) {
+    setAffiliations(
+      (prev) => prev?.map((x) => (x.id === a.id ? { ...x, avatar_url: avatarUrl || null } : x)) ?? null
+    );
+    try {
+      const res = await fetch(`/api/admin/affiliations/${a.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar_url: avatarUrl || null }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Update failed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save avatar URL");
     }
   }
 
@@ -90,6 +115,12 @@ export function AdminAffiliationsPanel() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
           />
+          <Input
+            placeholder="Avatar URL (optional)"
+            value={newAvatarUrl}
+            onChange={(e) => setNewAvatarUrl(e.target.value)}
+            className="max-w-56"
+          />
           <Button type="submit" disabled={busy}>
             Add
           </Button>
@@ -104,9 +135,27 @@ export function AdminAffiliationsPanel() {
         ) : (
           <ul className="divide-y divide-border/60">
             {affiliations.map((a) => (
-              <li key={a.id} className="flex items-center justify-between gap-2 py-3">
-                <span className="font-medium">{a.name}</span>
-                <div className="flex items-center gap-3">
+              <li key={a.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div className="flex items-center gap-2">
+                  <Avatar className="size-8">
+                    <AvatarImage src={a.avatar_url ?? undefined} alt="" />
+                    <AvatarFallback className="bg-primary/15 text-xs text-primary">
+                      {a.name.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="font-medium">{a.name}</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Input
+                    placeholder="Avatar URL"
+                    defaultValue={a.avatar_url ?? ""}
+                    onBlur={(e) => {
+                      if (e.target.value !== (a.avatar_url ?? "")) {
+                        handleAvatarChange(a, e.target.value);
+                      }
+                    }}
+                    className="h-8 w-48 text-xs"
+                  />
                   <div className="flex items-center gap-2">
                     <Switch
                       checked={a.is_allowed}
