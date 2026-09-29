@@ -148,23 +148,25 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col bg-background lg:flex-row">
-      {/* Full-height mascot panel — its own side of the screen, not squeezed
-          into the content column, so it reads as a real presence rather than
-          a decorative thumbnail. Hidden below lg: there's no sensible "side"
-          on a narrow screen, and the sign-in task should own the space. */}
-      <div className="relative hidden shrink-0 basis-[38%] lg:block">
-        <Image
-          src="/erar-full.png"
-          alt=""
-          fill
-          priority
-          sizes="(min-width: 1024px) 38vw, 0px"
-          className="object-cover"
-        />
-      </div>
+    <main className="relative flex flex-1 flex-col overflow-hidden bg-background">
+      {/* Mascot as atmosphere, not a screen division — full-bleed behind the
+          single content column, dimmed and scrimmed so it reads as texture
+          rather than a competing hero photo. */}
+      <Image
+        src="/erar-full.png"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        className="object-cover object-[95%_65%] opacity-45"
+      />
+      {/* Two-directional scrim: solid over the text column on the left,
+          fading to just a dark tint on the right where the mascot shows
+          through, and solid again toward the bottom where the card sits. */}
+      <div className="absolute inset-0 bg-gradient-to-r from-background from-55% via-background/45 to-background/10" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/30 to-background" />
 
-      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 py-8 lg:px-10 lg:py-10">
+      <div className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 py-8 lg:px-10 lg:py-10">
         <div className="flex items-center justify-between">
           <Logo iconSize={30} />
           <Badge variant="outline">Invite-only access</Badge>
@@ -185,7 +187,7 @@ export default function LoginPage() {
           <FeatureSlider />
 
           <div className="flex flex-col gap-6">
-            <Card className="w-full max-w-sm">
+            <Card className="w-full">
               <CardHeader>
                 <CardTitle>{sent ? "Check your inbox" : "Sign in"}</CardTitle>
                 {sent ? (
@@ -344,7 +346,7 @@ export default function LoginPage() {
             </Card>
 
             {!sent && (
-              <div className="w-full max-w-sm text-sm">
+              <div className="w-full text-sm">
                 {!showRequestForm ? (
                   <button
                     type="button"
