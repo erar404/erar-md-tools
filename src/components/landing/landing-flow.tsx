@@ -267,16 +267,16 @@ export function LandingFlow() {
     return (
       <div className="space-y-4 [view-transition-name:job-panel]">
         {job.status !== "done" && job.status !== "error" && (
-          <div className="flex flex-col items-center gap-2 py-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-4 py-2 text-sm text-muted-foreground">
             <Image
               src="/happy-logo-animated.gif"
               alt=""
-              width={96}
-              height={96}
+              width={140}
+              height={140}
               unoptimized
-              className="rounded-full"
+              className="shrink-0 rounded-full"
             />
-            {job.status === "pending" ? "Queued…" : "Downloading…"}
+            <span>{job.status === "pending" ? "Queued…" : "Downloading…"}</span>
           </div>
         )}
         {job.status === "error" && (
@@ -284,13 +284,13 @@ export function LandingFlow() {
             {(() => {
               const { summary, cause } = explainJobError(job.error_message);
               return (
-                <div className="flex items-start gap-2">
+                <div className="flex items-center gap-4">
                   <Image
                     src="/sad-logo.png"
                     alt=""
-                    width={32}
-                    height={32}
-                    className="mt-0.5 rounded-full"
+                    width={56}
+                    height={56}
+                    className="shrink-0 rounded-full"
                   />
                   <div className="space-y-1">
                     <p className="text-sm text-destructive">{summary}</p>
@@ -309,20 +309,20 @@ export function LandingFlow() {
             <p className="text-sm">Download complete.</p>
             {isEditableFormat(format) ? (
               <>
-                <Button onClick={handleContinueToEdit} disabled={continuing} className="w-full">
+                <Button onClick={handleContinueToEdit} loading={continuing} className="w-full">
                   {continuing ? "Opening…" : "Continue to Edit"}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleDownloadFile}
-                  disabled={downloadingFile}
+                  loading={downloadingFile}
                   className="w-full"
                 >
                   {downloadingFile ? "Preparing…" : "Just download the file"}
                 </Button>
               </>
             ) : (
-              <Button onClick={handleDownloadFile} disabled={downloadingFile} className="w-full">
+              <Button onClick={handleDownloadFile} loading={downloadingFile} className="w-full">
                 {downloadingFile ? "Preparing…" : "Download file"}
               </Button>
             )}
@@ -366,7 +366,7 @@ export function LandingFlow() {
               onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus
             />
-            <Button type="submit" disabled={searching} size="sm">
+            <Button type="submit" loading={searching} size="sm">
               {searching ? "Searching…" : "Search"}
             </Button>
           </form>
@@ -504,14 +504,14 @@ export function LandingFlow() {
               </Select>
             </div>
           </div>
-          <Button onClick={handleDownload} disabled={submitting} className="w-full">
+          <Button onClick={handleDownload} loading={submitting} className="w-full">
             {submitting ? "Starting…" : "Download"}
           </Button>
         </div>
       )}
 
       {!showFormatPicker && (
-        <Button onClick={handleProcess} disabled={submitting} className="w-full">
+        <Button onClick={handleProcess} loading={submitting} className="w-full">
           {submitting ? "Uploading…" : "Process"}
         </Button>
       )}

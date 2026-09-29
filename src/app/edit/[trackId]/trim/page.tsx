@@ -207,7 +207,7 @@ export default function TrimPage() {
         </div>
 
         {job?.status === "done" ? (
-          <Button onClick={handleDownloadResult} disabled={downloading} className="w-full">
+          <Button onClick={handleDownloadResult} loading={downloading} className="w-full">
             {downloading ? "Preparing…" : "Download trimmed file"}
           </Button>
         ) : (

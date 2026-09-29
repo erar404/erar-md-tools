@@ -58,7 +58,7 @@ export function DownloadJobRow({ job }: { job: Job }) {
         )}
       </div>
       {job.status === "done" && result ? (
-        <Button size="sm" variant="outline" onClick={handleDownload} disabled={downloading}>
+        <Button size="sm" variant="outline" onClick={handleDownload} loading={downloading}>
           {downloading ? "Preparing…" : "Download"}
         </Button>
       ) : (

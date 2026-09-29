@@ -20,3 +20,28 @@ export async function createSignedDownloadUrl(
   if (error || !data) throw error ?? new Error("Could not create a download link");
   return data.signedUrl;
 }
+
+/** Avatars live in the public `avatars` bucket at "<ownerPath>/avatar" (no
+ * extension — Content-Type comes from the upload, not the filename), always
+ * `upsert`ed in place so re-uploading never leaves an orphaned old file
+ * behind. The returned URL carries a `?v=` cache-buster so an <img> showing
+ * the old photo actually refreshes, since the underlying path never changes. */
+export async function uploadAvatar(
+  supabase: SupabaseClient,
+  ownerPath: string,
+  file: File
+): Promise<string> {
+  const path = `${ownerPath}/avatar`;
+  const { error } = await supabase.storage
+    .from("avatars")
+    .upload(path, file, { upsert: true, contentType: file.type, cacheControl: "3600" });
+  if (error) throw error;
+
+  const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+  return `${data.publicUrl}?v=${Date.now()}`;
+}
+
+export async function removeAvatar(supabase: SupabaseClient, ownerPath: string): Promise<void> {
+  const { error } = await supabase.storage.from("avatars").remove([`${ownerPath}/avatar`]);
+  if (error) throw error;
+}

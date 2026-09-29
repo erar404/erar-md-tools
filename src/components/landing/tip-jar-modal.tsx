@@ -44,31 +44,38 @@ export function TipJarModal({ open, onOpenChange }: { open: boolean; onOpenChang
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="font-heading">Download complete!</DialogTitle>
-          <DialogDescription className="whitespace-pre-line">
-            {TIP_MESSAGES[messageIndex]}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex items-center justify-center gap-4">
-          <div className="space-y-1.5 text-center">
+      <DialogContent className="sm:max-w-lg">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+          <DialogHeader className="flex-1 gap-3">
+            <DialogTitle className="font-heading">Download complete!</DialogTitle>
+            <DialogDescription className="whitespace-pre-line">
+              {TIP_MESSAGES[messageIndex]}
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* The tip-jar's own side of the dialog — bigger and set apart
+              from the message, not a small thumbnail squeezed underneath it. */}
+          <div className="flex shrink-0 flex-col items-center gap-3">
             <Image
               src="/brand-qrcode.png"
               alt="Tip jar QR code"
-              width={160}
-              height={160}
+              width={208}
+              height={208}
               className="rounded-md border border-border/60"
             />
-            <p className="text-xs text-muted-foreground">Scan to send a tip — thank you!</p>
+            <div className="flex items-center gap-2">
+              <Image
+                src={mood === "happy" ? "/happy-logo.png" : "/sad-logo.png"}
+                alt=""
+                width={88}
+                height={88}
+                className="rounded-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                Scan to send a tip — thank you!
+              </p>
+            </div>
           </div>
-          <Image
-            src={mood === "happy" ? "/happy-logo.png" : "/sad-logo.png"}
-            alt=""
-            width={72}
-            height={72}
-            className="rounded-full"
-          />
         </div>
       </DialogContent>
     </Dialog>

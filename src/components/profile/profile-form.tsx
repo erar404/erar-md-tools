@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { removeAvatar, uploadAvatar } from "@/lib/storage-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +36,9 @@ export function ProfileForm({
   const [affiliationId, setAffiliationId] = useState(profile.affiliation_id ?? "");
   const [username, setUsername] = useState(profile.username ?? "");
   const [saving, setSaving] = useState(false);
+
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [mustChangePassword, setMustChangePassword] = useState(profile.must_change_password);
   const [newPassword, setNewPassword] = useState("");
@@ -88,6 +92,53 @@ export function ProfileForm({
       );
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleAvatarFile(file: File) {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Choose an image file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image is too large — max 5MB.");
+      return;
+    }
+    setUploadingAvatar(true);
+    try {
+      const supabase = createClient();
+      const publicUrl = await uploadAvatar(supabase, profile.id, file);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl })
+        .eq("id", profile.id);
+      if (error) throw error;
+      withViewTransition(() => setAvatarUrl(publicUrl));
+      toast.success("Photo updated.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not upload photo");
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  }
+
+  async function handleRemoveAvatar() {
+    setUploadingAvatar(true);
+    try {
+      const supabase = createClient();
+      await removeAvatar(supabase, profile.id);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ avatar_url: null })
+        .eq("id", profile.id);
+      if (error) throw error;
+      withViewTransition(() => setAvatarUrl(""));
+      toast.success("Photo removed.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not remove photo");
+    } finally {
+      setUploadingAvatar(false);
     }
   }
 
@@ -159,12 +210,38 @@ export function ProfileForm({
               )}
             </div>
             <div className="flex-1 space-y-2">
-              <Label htmlFor="avatar-url">Avatar URL</Label>
-              <Input
-                id="avatar-url"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="https://…/photo.jpg"
+              <Label>Photo</Label>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => avatarInputRef.current?.click()}
+                  loading={uploadingAvatar}
+                >
+                  {uploadingAvatar ? "Uploading…" : avatarUrl ? "Change photo" : "Upload photo"}
+                </Button>
+                {avatarUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemoveAvatar}
+                    disabled={uploadingAvatar}
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleAvatarFile(file);
+                }}
               />
             </div>
           </div>
@@ -243,7 +320,7 @@ export function ProfileForm({
             </Select>
           </div>
 
-          <Button type="submit" disabled={saving} className="w-full">
+          <Button type="submit" loading={saving} className="w-full">
             {saving ? "Saving…" : "Save changes"}
           </Button>
           </form>
@@ -286,7 +363,8 @@ export function ProfileForm({
             </div>
             <Button
               type="submit"
-              disabled={changingPassword || !profile.username || !newPassword}
+              disabled={!profile.username || !newPassword}
+              loading={changingPassword}
               className="w-full"
             >
               {changingPassword ? "Updating…" : "Update password"}

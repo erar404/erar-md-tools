@@ -412,7 +412,11 @@ export default function SplitPage() {
 
             <div className="space-y-2 border-t pt-4">
               {mixdownResult ? (
-                <Button onClick={handleDownloadMixdown} disabled={downloadingMixdown} className="w-full">
+                <Button
+                  onClick={handleDownloadMixdown}
+                  loading={downloadingMixdown}
+                  className="w-full"
+                >
                   {downloadingMixdown ? "Preparing…" : "Download mixdown"}
                 </Button>
               ) : (

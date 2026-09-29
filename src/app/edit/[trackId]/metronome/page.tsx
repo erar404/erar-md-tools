@@ -373,6 +373,7 @@ export default function MetronomePage() {
               <Button
                 onClick={() => handleDownload("click", result.click_storage_path)}
                 disabled={downloading !== null}
+                loading={downloading === "click"}
                 className="flex-1"
               >
                 {downloading === "click" ? "Preparing…" : "Download click only"}
@@ -382,6 +383,7 @@ export default function MetronomePage() {
                   variant="secondary"
                   onClick={() => handleDownload("merged", result.merged_storage_path!)}
                   disabled={downloading !== null}
+                  loading={downloading === "merged"}
                   className="flex-1"
                 >
                   {downloading === "merged" ? "Preparing…" : "Download merged with source"}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { AffiliationRequest } from "@/types/database";
 
 function formatDate(iso: string) {
@@ -59,7 +60,10 @@ export function AdminAffiliationRequestsPanel() {
       </CardHeader>
       <CardContent className="space-y-6">
         {!requests ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
         ) : (
           <>
             <div className="space-y-2">

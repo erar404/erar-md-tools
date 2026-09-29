@@ -148,43 +148,44 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col bg-background">
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-8 lg:px-10 lg:py-10">
+    <main className="flex flex-1 flex-col bg-background lg:flex-row">
+      {/* Full-height mascot panel — its own side of the screen, not squeezed
+          into the content column, so it reads as a real presence rather than
+          a decorative thumbnail. Hidden below lg: there's no sensible "side"
+          on a narrow screen, and the sign-in task should own the space. */}
+      <div className="relative hidden shrink-0 basis-[38%] lg:block">
+        <Image
+          src="/erar-full.png"
+          alt=""
+          fill
+          priority
+          sizes="(min-width: 1024px) 38vw, 0px"
+          className="object-cover"
+        />
+      </div>
+
+      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 py-8 lg:px-10 lg:py-10">
         <div className="flex items-center justify-between">
           <Logo iconSize={30} />
           <Badge variant="outline">Invite-only access</Badge>
         </div>
 
-        <div className="flex flex-1 flex-col justify-center gap-12 py-10 lg:grid lg:grid-cols-[1.4fr_1fr] lg:content-center lg:items-center lg:gap-16 lg:py-16">
-          <div className="flex flex-col gap-8 lg:self-stretch lg:border-r lg:border-border/60 lg:pr-16">
-            <div className="max-w-lg space-y-4">
-              <h1 className="font-heading text-4xl leading-[1.1] font-semibold text-foreground sm:text-5xl">
-                Everything before the downbeat.
-              </h1>
-              <p className="max-w-md text-base text-muted-foreground">
-                MD Tools turns a YouTube link or a rough recording into the exact
-                clip, click track, or stem you need. Before rehearsal starts, not
-                during it.
-              </p>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 sm:items-stretch">
-              <div className="flex items-center justify-center rounded-xl bg-card p-4 ring-1 ring-foreground/10">
-                <Image
-                  src="/erar-full.png"
-                  alt=""
-                  width={1205}
-                  height={1305}
-                  className="h-auto max-h-40 w-auto sm:max-h-48"
-                  priority
-                />
-              </div>
-              <FeatureSlider />
-            </div>
+        <div className="flex flex-1 flex-col justify-center gap-10 py-10">
+          <div className="space-y-4">
+            <h1 className="font-heading text-4xl leading-[1.1] font-semibold text-foreground sm:text-5xl">
+              Everything before the downbeat.
+            </h1>
+            <p className="max-w-md text-base text-muted-foreground">
+              MD Tools turns a YouTube link or a rough recording into the exact
+              clip, click track, or stem you need. Before rehearsal starts, not
+              during it.
+            </p>
           </div>
 
-          <div className="flex flex-col justify-center gap-6">
-            <Card className="mx-auto w-full max-w-sm lg:mx-0">
+          <FeatureSlider />
+
+          <div className="flex flex-col gap-6">
+            <Card className="w-full max-w-sm">
               <CardHeader>
                 <CardTitle>{sent ? "Check your inbox" : "Sign in"}</CardTitle>
                 {sent ? (
@@ -295,7 +296,8 @@ export default function LoginPage() {
                         <Button
                           type="submit"
                           className="w-full"
-                          disabled={sending || !affiliations?.length}
+                          disabled={!affiliations?.length}
+                          loading={sending}
                         >
                           {sending ? "Sending link…" : "Send sign-in link"}
                         </Button>
@@ -328,7 +330,7 @@ export default function LoginPage() {
                             autoComplete="current-password"
                           />
                         </div>
-                        <Button type="submit" className="w-full" disabled={signingIn}>
+                        <Button type="submit" className="w-full" loading={signingIn}>
                           {signingIn ? "Signing in…" : "Sign in"}
                         </Button>
                         <p className="text-xs text-muted-foreground">
@@ -342,7 +344,7 @@ export default function LoginPage() {
             </Card>
 
             {!sent && (
-              <div className="mx-auto w-full max-w-sm text-sm lg:mx-0">
+              <div className="w-full max-w-sm text-sm">
                 {!showRequestForm ? (
                   <button
                     type="button"
@@ -405,7 +407,7 @@ export default function LoginPage() {
                               placeholder="Anything that helps us verify you"
                             />
                           </div>
-                          <Button type="submit" className="w-full" disabled={requestSending}>
+                          <Button type="submit" className="w-full" loading={requestSending}>
                             {requestSending ? "Sending…" : "Submit request"}
                           </Button>
                         </form>
