@@ -7,6 +7,7 @@ accompaniment separation, not a post-hoc mixdown of the 4-stem output) —
 the accompaniment side is stored under stem_name "other" since the
 track_stems.stem_name enum has no dedicated "instrumental" value.
 """
+import os
 import subprocess
 from pathlib import Path
 from typing import Any, Literal
@@ -14,7 +15,12 @@ from typing import Any, Literal
 from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel
 
-from ..config import DEMUCS_MODEL, DEMUCS_SEGMENT, PROCESSED_BUCKET
+from ..config import (
+    DEMUCS_MODEL,
+    DEMUCS_SEGMENT,
+    DEMUCS_SUBPROCESS_ENV_OVERRIDES,
+    PROCESSED_BUCKET,
+)
 from ..jobs import run_job
 from ..security import verify_service_token
 from ..storage import download_to, upload_file
@@ -39,14 +45,20 @@ def _do_split(job_id: str, storage_path: str, stems: int, tmp_dir: Path) -> dict
     local_path = download_to(storage_path, tmp_dir)
     out_dir = tmp_dir / "demucs_out"
 
-    cmd = ["python", "-m", "demucs.separate", "-n", DEMUCS_MODEL, "-o", str(out_dir)]
+    cmd = ["python", "-m", "demucs.separate", "-n", DEMUCS_MODEL, "-j", "1", "-o", str(out_dir)]
     if DEMUCS_SEGMENT:
         cmd += ["--segment", DEMUCS_SEGMENT]
     if stems == 2:
         cmd += ["--two-stems", "vocals"]
     cmd.append(str(local_path))
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+    # `-j 1` keeps demucs from spawning parallel workers, and the thread-pool
+    # caps stop the CPU BLAS backend from allocating a scratch buffer per
+    # detected core — both only apply to this subprocess's own environment.
+    subprocess_env = {**os.environ, **DEMUCS_SUBPROCESS_ENV_OVERRIDES}
+    result = subprocess.run(
+        cmd, capture_output=True, text=True, timeout=1800, env=subprocess_env
+    )
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or "").strip()
         if not detail and result.returncode < 0:

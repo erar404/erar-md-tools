@@ -6,6 +6,7 @@ is `<bucket>/<user_id>/<...>` — the bucket name is always the first path
 segment, so a bare path is never ambiguous about which private bucket it
 lives in.
 """
+import gc
 from pathlib import Path
 from typing import Tuple
 
@@ -27,6 +28,15 @@ def download_to(storage_path: str, dest_dir: Path) -> Path:
     dest_dir.mkdir(parents=True, exist_ok=True)
     local_path = dest_dir / Path(key).name
     local_path.write_bytes(data)
+    # The SDK buffers the whole source file in memory (a source track can be
+    # tens of MB); CPython's allocator rarely hands freed heap back to the
+    # OS, so without this a large download here permanently raises this
+    # worker's own RSS floor — memory the demucs subprocess then has to
+    # compete for against the same container limit. Explicitly dropping the
+    # reference and collecting is the only lever available short of
+    # streaming the download, which would mean bypassing the SDK entirely.
+    del data
+    gc.collect()
     return local_path
 
 

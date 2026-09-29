@@ -20,12 +20,26 @@ SUPABASE_SERVICE_ROLE_KEY = _require("SUPABASE_SERVICE_ROLE_KEY")
 
 TMP_DIR = os.environ.get("PROCESSOR_TMP_DIR", "/tmp/md-tools-processor")
 DEMUCS_MODEL = os.environ.get("DEMUCS_MODEL", "htdemucs")
-# Chunk length (seconds) demucs feeds the model per pass. Unset by default —
-# smaller values cut peak memory per pass (at a small speed cost) but the
-# real fix for an out-of-memory kill is raising the service's memory limit;
-# only set this if that's not an option. htdemucs was trained on ~7.8s
-# segments, so values above that get silently clamped by demucs itself.
-DEMUCS_SEGMENT = os.environ.get("DEMUCS_SEGMENT")
+# Chunk length (seconds) demucs feeds the model per pass — the main lever we
+# have over the model's own peak memory, since the container has a hard 1GB
+# ceiling. Defaults to a conservative 4s (htdemucs was trained on ~7.8s
+# segments, so 7 is barely a cut from its own default and wasn't enough on
+# its own — 4 gives a real reduction in per-pass activation memory, at a
+# real but acceptable speed cost). Override via the env var if the memory
+# limit is ever raised and the faster/higher-quality default is wanted back.
+DEMUCS_SEGMENT = os.environ.get("DEMUCS_SEGMENT", "4")
+# Caps BLAS/OpenMP thread pools for the demucs subprocess so CPU inference
+# doesn't spin up one scratch buffer per detected core — real memory
+# savings on a memory-capped container, at a speed cost that's acceptable
+# since a split job already runs for minutes. Only affects the demucs
+# subprocess's environment, not this API process itself.
+DEMUCS_SUBPROCESS_ENV_OVERRIDES = {
+    "OMP_NUM_THREADS": os.environ.get("OMP_NUM_THREADS", "1"),
+    "MKL_NUM_THREADS": os.environ.get("MKL_NUM_THREADS", "1"),
+    "OPENBLAS_NUM_THREADS": os.environ.get("OPENBLAS_NUM_THREADS", "1"),
+    "VECLIB_MAXIMUM_THREADS": os.environ.get("VECLIB_MAXIMUM_THREADS", "1"),
+    "NUMEXPR_NUM_THREADS": os.environ.get("NUMEXPR_NUM_THREADS", "1"),
+}
 FFMPEG_PATH = os.environ.get("FFMPEG_PATH", "ffmpeg")
 
 # Optional escape hatch for YouTube's "Sign in to confirm you're not a bot"
