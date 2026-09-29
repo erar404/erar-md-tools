@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader2Icon, PauseIcon, PlayIcon } from "lucide-react";
+import Image from "next/image";
+import { PauseIcon, PlayIcon } from "lucide-react";
 import { toast } from "sonner";
 import WaveSurfer from "wavesurfer.js";
 import { useTrackAudio } from "@/components/edit/track-audio-provider";
@@ -9,6 +10,7 @@ import { JobStatusButton } from "@/components/edit/job-status-button";
 import { createClient } from "@/lib/supabase/client";
 import { createSignedDownloadUrl } from "@/lib/storage-client";
 import { useJobStatus } from "@/lib/use-job-status";
+import { withViewTransition } from "@/lib/view-transition";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +47,16 @@ const STEM_LABELS: Record<string, string> = {
   piano: "Piano",
 };
 
+// Rotates while the stems decode so a multi-second wait reads as active
+// progress rather than a stalled interface.
+const STEM_LOADING_MESSAGES = [
+  "Decoding your stems…",
+  "Warming up the mixer…",
+  "Lining up the waveforms…",
+  "Almost ready to play…",
+];
+const STEM_LOADING_MESSAGE_MS = 2200;
+
 export default function SplitPage() {
   const { track } = useTrackAudio();
   const [supabase] = useState(() => createClient());
@@ -54,7 +66,13 @@ export default function SplitPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const [stems, setStems] = useState<StemInfo[] | null>(null);
-  const [loadingStems, setLoadingStems] = useState(false);
+  const [stemsError, setStemsError] = useState(false);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
+  // Derived straight from render state (not an effect) so there's no gap
+  // frame where the job is "done" but stems aren't ready yet — that gap used
+  // to show the idle "Split" button again for a tick, reading as a flicker.
+  const preparingStems = splitJob?.status === "done" && !stems && !stemsError;
 
   const [volumes, setVolumes] = useState<Record<string, number>>({});
   const [muted, setMuted] = useState<Record<string, boolean>>({});
@@ -95,7 +113,6 @@ export default function SplitPage() {
     let cancelled = false;
 
     async function setup() {
-      setLoadingStems(true);
       try {
         const ctx = new AudioContext();
         audioCtxRef.current = ctx;
@@ -124,13 +141,16 @@ export default function SplitPage() {
         }
 
         if (cancelled) return;
-        setVolumes(initialVolumes);
-        setMuted(initialMuted);
-        setStems(resolved);
+        // Cross-fade into the finished mixer instead of snapping to it —
+        // this is the biggest visual swap on the page.
+        withViewTransition(() => {
+          setVolumes(initialVolumes);
+          setMuted(initialMuted);
+          setStems(resolved);
+        });
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Could not load stems");
-      } finally {
-        if (!cancelled) setLoadingStems(false);
+        if (!cancelled) setStemsError(true);
       }
     }
 
@@ -140,6 +160,18 @@ export default function SplitPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [splitJob?.status]);
+
+  // Cycles the "preparing stems" copy so a multi-second decode doesn't read
+  // as a stalled interface.
+  useEffect(() => {
+    if (!preparingStems) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoadingMessageIndex(0);
+    const interval = setInterval(() => {
+      setLoadingMessageIndex((i) => (i + 1) % STEM_LOADING_MESSAGES.length);
+    }, STEM_LOADING_MESSAGE_MS);
+    return () => clearInterval(interval);
+  }, [preparingStems]);
 
   // Mute/solo/volume changes only touch gain, never pause/restart sources,
   // so all stems stay sample-accurately in sync.
@@ -342,7 +374,7 @@ export default function SplitPage() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!stems && (
+        {!stems && !preparingStems && (
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <Label>Stems</Label>
@@ -367,10 +399,19 @@ export default function SplitPage() {
           </div>
         )}
 
-        {loadingStems && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2Icon className="size-4 animate-spin" />
-            Loading stems…
+        {preparingStems && (
+          <div className="flex items-center gap-4 py-2 text-sm text-muted-foreground">
+            <Image
+              src="/happy-logo-animated.gif"
+              alt=""
+              width={96}
+              height={96}
+              unoptimized
+              className="shrink-0 rounded-full"
+            />
+            <span key={loadingMessageIndex} className="animate-loading-in">
+              {STEM_LOADING_MESSAGES[loadingMessageIndex]}
+            </span>
           </div>
         )}
 
