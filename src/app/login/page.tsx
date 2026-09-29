@@ -166,27 +166,32 @@ export default function LoginPage() {
       <div className="absolute inset-0 bg-gradient-to-r from-background from-55% via-background/45 to-background/10" />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/30 to-background" />
 
-      <div className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 py-8 lg:px-10 lg:py-10">
+      <div className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-5 lg:px-10 lg:py-6">
         <div className="flex items-center justify-between">
           <Logo iconSize={30} />
           <Badge variant="outline">Invite-only access</Badge>
         </div>
 
-        <div className="flex flex-1 flex-col justify-center gap-10 py-10">
-          <div className="space-y-4">
-            <h1 className="font-heading text-4xl leading-[1.1] font-semibold text-foreground sm:text-5xl">
-              Everything before the downbeat.
-            </h1>
-            <p className="max-w-md text-base text-muted-foreground">
-              MD Tools turns a YouTube link or a rough recording into the exact
-              clip, click track, or stem you need. Before rehearsal starts, not
-              during it.
-            </p>
+        {/* Text and login sit side by side at lg — aligned as two columns of
+            the same row, not stacked — so the whole page fits one screen
+            instead of running past it. */}
+        <div className="flex flex-1 flex-col justify-center gap-8 py-6 lg:grid lg:grid-cols-[1.3fr_1fr] lg:items-center lg:gap-12 lg:py-0">
+          <div className="flex flex-col gap-6 lg:border-r lg:border-border/60 lg:pr-12">
+            <div className="space-y-3">
+              <h1 className="font-heading text-3xl leading-[1.1] font-semibold text-foreground sm:text-4xl lg:text-[2.75rem]">
+                Everything before the downbeat.
+              </h1>
+              <p className="max-w-md text-base text-muted-foreground">
+                MD Tools turns a YouTube link or a rough recording into the exact
+                clip, click track, or stem you need. Before rehearsal starts, not
+                during it.
+              </p>
+            </div>
+
+            <FeatureSlider />
           </div>
 
-          <FeatureSlider />
-
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4">
             <Card className="w-full">
               <CardHeader>
                 <CardTitle>{sent ? "Check your inbox" : "Sign in"}</CardTitle>
