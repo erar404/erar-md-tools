@@ -20,6 +20,12 @@ SUPABASE_SERVICE_ROLE_KEY = _require("SUPABASE_SERVICE_ROLE_KEY")
 
 TMP_DIR = os.environ.get("PROCESSOR_TMP_DIR", "/tmp/md-tools-processor")
 DEMUCS_MODEL = os.environ.get("DEMUCS_MODEL", "htdemucs")
+# Chunk length (seconds) demucs feeds the model per pass. Unset by default —
+# smaller values cut peak memory per pass (at a small speed cost) but the
+# real fix for an out-of-memory kill is raising the service's memory limit;
+# only set this if that's not an option. htdemucs was trained on ~7.8s
+# segments, so values above that get silently clamped by demucs itself.
+DEMUCS_SEGMENT = os.environ.get("DEMUCS_SEGMENT")
 FFMPEG_PATH = os.environ.get("FFMPEG_PATH", "ffmpeg")
 
 # Optional escape hatch for YouTube's "Sign in to confirm you're not a bot"

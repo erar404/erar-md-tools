@@ -157,28 +157,30 @@ export default function LoginPage() {
 
         <div className="flex flex-1 flex-col justify-center gap-12 py-10 lg:grid lg:grid-cols-[1.4fr_1fr] lg:content-center lg:items-center lg:gap-16 lg:py-16">
           <div className="flex flex-col gap-8 lg:self-stretch lg:border-r lg:border-border/60 lg:pr-16">
-            <div className="flex flex-col-reverse items-start gap-4 sm:flex-row sm:justify-between sm:gap-6">
-              <div className="max-w-lg space-y-4">
-                <h1 className="font-heading text-4xl leading-[1.1] font-semibold text-foreground sm:text-5xl">
-                  Everything before the downbeat.
-                </h1>
-                <p className="max-w-md text-base text-muted-foreground">
-                  MD Tools turns a YouTube link or a rough recording into the exact
-                  clip, click track, or stem you need. Before rehearsal starts, not
-                  during it.
-                </p>
-              </div>
-              <Image
-                src="/erar-full.png"
-                alt=""
-                width={140}
-                height={144}
-                className="h-auto w-20 shrink-0 sm:w-24 lg:w-28"
-                priority
-              />
+            <div className="max-w-lg space-y-4">
+              <h1 className="font-heading text-4xl leading-[1.1] font-semibold text-foreground sm:text-5xl">
+                Everything before the downbeat.
+              </h1>
+              <p className="max-w-md text-base text-muted-foreground">
+                MD Tools turns a YouTube link or a rough recording into the exact
+                clip, click track, or stem you need. Before rehearsal starts, not
+                during it.
+              </p>
             </div>
 
-            <FeatureSlider />
+            <div className="grid gap-4 sm:grid-cols-2 sm:items-stretch">
+              <div className="flex items-center justify-center rounded-xl bg-card p-4 ring-1 ring-foreground/10">
+                <Image
+                  src="/erar-full.png"
+                  alt=""
+                  width={1205}
+                  height={1305}
+                  className="h-auto max-h-40 w-auto sm:max-h-48"
+                  priority
+                />
+              </div>
+              <FeatureSlider />
+            </div>
           </div>
 
           <div className="flex flex-col justify-center gap-6">

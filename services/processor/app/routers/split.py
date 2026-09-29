@@ -14,7 +14,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel
 
-from ..config import DEMUCS_MODEL, PROCESSED_BUCKET
+from ..config import DEMUCS_MODEL, DEMUCS_SEGMENT, PROCESSED_BUCKET
 from ..jobs import run_job
 from ..security import verify_service_token
 from ..storage import download_to, upload_file
@@ -40,13 +40,27 @@ def _do_split(job_id: str, storage_path: str, stems: int, tmp_dir: Path) -> dict
     out_dir = tmp_dir / "demucs_out"
 
     cmd = ["python", "-m", "demucs.separate", "-n", DEMUCS_MODEL, "-o", str(out_dir)]
+    if DEMUCS_SEGMENT:
+        cmd += ["--segment", DEMUCS_SEGMENT]
     if stems == 2:
         cmd += ["--two-stems", "vocals"]
     cmd.append(str(local_path))
 
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
     if result.returncode != 0:
-        raise RuntimeError(f"demucs separation failed: {result.stderr[-2000:]}")
+        detail = (result.stderr or result.stdout or "").strip()
+        if not detail and result.returncode < 0:
+            # A killed-with-no-output process (empty stdout/stderr, negative
+            # returncode = -signal) is almost always the OOM killer, not a
+            # demucs error — surface that instead of a silent blank message.
+            detail = (
+                f"process was killed by signal {-result.returncode} before it produced "
+                "any output — most likely an out-of-memory kill (demucs needs more RAM "
+                "than this container currently has)"
+            )
+        elif not detail:
+            detail = f"exit code {result.returncode}, no output captured"
+        raise RuntimeError(f"demucs separation failed: {detail[-2000:]}")
 
     stem_dir = out_dir / DEMUCS_MODEL / local_path.stem
     if stems == 2:

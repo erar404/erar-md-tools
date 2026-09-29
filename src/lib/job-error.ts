@@ -51,6 +51,15 @@ export function explainJobError(message: string | null | undefined): {
     };
   }
 
+  if (/demucs separation failed/i.test(raw)) {
+    return {
+      summary: raw,
+      cause: /out-of-memory|killed by signal/i.test(raw)
+        ? "The processing service ran out of memory while splitting this track. Try again — if it keeps happening, an admin needs to raise the processor's memory limit on Railway."
+        : "Something went wrong splitting this track. Try again, and if it keeps failing, check the processor's logs on Railway.",
+    };
+  }
+
   if (/ffmpeg .*(failed|error)/i.test(raw)) {
     return {
       summary: raw,
