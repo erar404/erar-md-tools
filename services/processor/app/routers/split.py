@@ -58,19 +58,26 @@ def _run_demucs(input_path: Path, out_dir: Path, stems: int) -> dict[str, Path]:
         cmd, capture_output=True, text=True, timeout=1800, env=subprocess_env
     )
     if result.returncode != 0:
-        detail = (result.stderr or result.stdout or "").strip()
-        if not detail and result.returncode < 0:
-            # A killed-with-no-output process (empty stdout/stderr, negative
-            # returncode = -signal) is almost always the OOM killer, not a
-            # demucs error — surface that instead of a silent blank message.
+        # stdout/stderr may both carry useful text (e.g. tqdm progress on one,
+        # a traceback on the other) — show both rather than picking just one.
+        captured = "\n".join(s.strip() for s in (result.stdout, result.stderr) if s and s.strip())
+        if result.returncode < 0:
+            # Negative returncode = killed by signal. This fires regardless of
+            # whether a tqdm progress fragment or other incidental output was
+            # captured first — that output on its own (no exception/traceback
+            # after it) isn't a real error message, it's just what was being
+            # printed the instant the process died, so it shouldn't suppress
+            # this diagnosis. Almost always the OOM killer on this container.
             detail = (
-                f"process was killed by signal {-result.returncode} before it produced "
-                "any output — most likely an out-of-memory kill (demucs needs more RAM "
-                "than this container currently has)"
+                f"process was killed by signal {-result.returncode} "
+                "(most likely an out-of-memory kill — demucs needs more RAM than this "
+                f"container currently has) — last output before the kill: {captured[-500:] or '(none)'}"
             )
-        elif not detail:
+        elif captured:
+            detail = f"exit code {result.returncode}: {captured[-2000:]}"
+        else:
             detail = f"exit code {result.returncode}, no output captured"
-        raise RuntimeError(f"demucs separation failed: {detail[-2000:]}")
+        raise RuntimeError(f"demucs separation failed: {detail}")
 
     stem_dir = out_dir / DEMUCS_MODEL / input_path.stem
     if stems == 2:
