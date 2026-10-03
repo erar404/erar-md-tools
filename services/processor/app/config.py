@@ -28,6 +28,15 @@ DEMUCS_MODEL = os.environ.get("DEMUCS_MODEL", "htdemucs")
 # real but acceptable speed cost). Override via the env var if the memory
 # limit is ever raised and the faster/higher-quality default is wanted back.
 DEMUCS_SEGMENT = os.environ.get("DEMUCS_SEGMENT", "4")
+# Longer sources are pre-split into overlapping chunks and fed to demucs one
+# at a time (see audio_chunking.py) because CPU peak memory scales with
+# *total* input duration regardless of --segment — confirmed both in our own
+# production OOM traces and upstream reports (facebookresearch/demucs#498:
+# ~7GB RSS for a 1h track, ~34GB for 4h, even with segment-based internal
+# processing). A file under CHUNK_SECONDS * 1.5 is run whole, unchanged, to
+# avoid the extra split/merge cost on the common short-song case.
+DEMUCS_CHUNK_SECONDS = float(os.environ.get("DEMUCS_CHUNK_SECONDS", "45"))
+DEMUCS_CHUNK_OVERLAP_SECONDS = float(os.environ.get("DEMUCS_CHUNK_OVERLAP_SECONDS", "3"))
 # Caps BLAS/OpenMP thread pools for the demucs subprocess so CPU inference
 # doesn't spin up one scratch buffer per detected core — real memory
 # savings on a memory-capped container, at a speed cost that's acceptable
