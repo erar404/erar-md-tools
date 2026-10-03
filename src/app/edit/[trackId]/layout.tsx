@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AnalyzerHeader } from "@/components/edit/analyzer-header";
 import { TrackAudioProvider } from "@/components/edit/track-audio-provider";
 import { EditTabs } from "@/components/edit/edit-tabs";
-import { Logo } from "@/components/branding/logo";
+import { EditHeaderTitle } from "@/components/edit/edit-header-title";
 import { UserMenu } from "@/components/nav/user-menu";
 import type { Profile, Track } from "@/types/database";
 
@@ -39,13 +39,7 @@ export default async function EditLayout({
       <div className="flex min-h-full flex-1 flex-col bg-background">
         <header className="border-b border-border/60 bg-card/40 px-6 py-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <Logo />
-              <span className="hidden text-border/60 sm:inline">/</span>
-              <h1 className="truncate font-heading text-base font-semibold text-foreground">
-                {track.title}
-              </h1>
-            </div>
+            <EditHeaderTitle trackId={trackId} trackTitle={track.title} />
             <div className="flex items-center gap-3">
               <AnalyzerHeader initialTrack={track} />
               {userData.user && (
